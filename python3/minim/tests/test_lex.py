@@ -1,5 +1,6 @@
 import unittest
 import minim.lex
+import minim.tokens
 
 
 class TestLex(unittest.TestCase):
@@ -22,6 +23,7 @@ class TestLex(unittest.TestCase):
             if token_type.is_content:
                 token = token_types.get_token(token_type)
                 result.append(token.content)
+        self.assertEqual(''.join(string_iter), ''.join(result))
 
     def test_content_tokens_3(self):
         """README example 3"""
@@ -33,4 +35,5 @@ class TestLex(unittest.TestCase):
             if token_type.is_content:
                 token = token_types.set_token(content_token)
                 result.append(token.content)
+        self.assertEqual(''.join(string_iter), ''.join(result))
 
