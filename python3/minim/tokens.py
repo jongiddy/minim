@@ -12,18 +12,10 @@ class Token:
     is_content = False    # Is this content
     is_markup = False     # or is it markup
 
-    def __init__(self):
+    def __init__(self, literal=None, encoding=None):
         self.is_token = True
-
-
-class Content(Token):
-
-    is_content = True
-
-    def __init__(self, literal=None, encoding=None, content=Undefined):
         self._literal = literal
         self._encoding = encoding
-        self._content = content
 
     @property
     def literal(self):
@@ -42,6 +34,15 @@ class Content(Token):
         else:
             bytes = self.literal.encode(encoding)
         return bytes
+
+
+class Content(Token):
+
+    is_content = True
+
+    def __init__(self, literal=None, encoding=None, content=Undefined):
+        super().__init__(literal, encoding)
+        self._content = content
 
     @property
     def content(self):
