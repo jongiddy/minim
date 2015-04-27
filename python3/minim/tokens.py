@@ -20,22 +20,34 @@ class Content(Token):
 
     is_content = True
 
-    def __init__(self, literal):
+    def __init__(self, literal=None, encoding=None, content=Undefined):
         self._literal = literal
-        self._content = Undefined
+        self._encoding = encoding
+        self._content = content
 
     @property
-    def literal(self, encoding=None):
-        if encoding is None:
-            return self._literal
+    def literal(self):
+        if self._encoding is not None:
+            self._literal = self._literal.decode(self._encoding)
+            self._encoding = None
+        return self._literal
+
+    def literal_bytes(self, encoding):
+        """Return the literal bytes from the source.
+
+        :param string encoding: Character encoding for returned
+            literal."""
+        if encoding == self._encoding:
+            bytes = self._literal
         else:
-            return self._literal.encode(encoding)
+            bytes = self.literal.encode(encoding)
+        return bytes
 
     @property
     def content(self):
         content = self._content
         if content is Undefined:
-            content = self._literal
+            content = self.literal
         return content
 
 
