@@ -17,6 +17,10 @@ class Token:
         self._literal = literal
         self._encoding = encoding
 
+    def set(self, **kw):
+        self._literal = kw.get('literal')
+        self._encoding = kw.get('encoding')
+
     @property
     def literal(self):
         if self._encoding is not None:
@@ -43,6 +47,10 @@ class Content(Token):
     def __init__(self, literal=None, encoding=None, content=Undefined):
         super().__init__(literal, encoding)
         self._content = content
+
+    def set(self, **kw):
+        super().set(**kw)
+        self._content = kw.get('content', Undefined)
 
     @property
     def content(self):
