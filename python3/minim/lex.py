@@ -21,7 +21,7 @@ def token_type_generator(string_iter):
             else:
                 assert issubclass(response, Token)
                 # response is a token_type, instantiate it and set contents
-                yield Content(s)
+                yield response(s)
 
 
 class token_types:
@@ -36,9 +36,15 @@ class token_types:
         return next(self.generator)
 
     def get_token(self, token_type):
-        return self.generator.send(token_type)
+        if token_type.is_token:
+            # The iterator is permitted to return a token for next()
+            # rather than a token_type.
+            return token_type
+        else:
+            return self.generator.send(token_type)
 
-    def set_token(self, token):
-        # This works as long as we don't really care what is being sent
-        # to the generator
-        return self.generator.send(token)
+    def set_token(self, token_type, token):
+        if token_type.is_token:
+            return token_type
+        else:
+            return self.generator.send(token)

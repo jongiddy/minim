@@ -33,7 +33,7 @@ class TestLex(unittest.TestCase):
         token_types = minim.lex.token_types(string_iter)
         for token_type in token_types:
             if token_type.is_content:
-                token = token_types.set_token(content_token)
+                token = token_types.set_token(token_type, content_token)
                 result.append(token.content)
         self.assertEqual(''.join(string_iter), ''.join(result))
 
