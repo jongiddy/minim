@@ -33,7 +33,8 @@ for token_type in token_types:
 
 This will allocate memory only for the content tokens to be displayed.
 
-For the ultimate in memory allocation reduction, use:
+For the ultimate in memory allocation reduction, add a ``token`` parameter to
+the ``get_token`` call:
 
 ```python
 
@@ -41,7 +42,7 @@ content_token = minim.tokens.Content()
 token_types = minim.lex.token_types(string_iter)
 for token_type in token_types:
 	if token_type.is_content:
-		token = token_types.set_token(token_type, content_token)
+		token = token_types.get_token(token_type, content_token)
 		sys.stdout.write(token.content)
 ```
 
