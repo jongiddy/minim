@@ -1,7 +1,7 @@
 from minim.tokens import Content, Token
 
 
-def tokens(string_iter):
+def TokenReader(string_iter):
     for s in string_iter:
         yield Content(s)
 
@@ -24,7 +24,7 @@ def token_type_generator(string_iter):
                 yield response(s)
 
 
-class token_types:
+class Reader:
 
     """Create an iterator that returns a sequence of token types.
 
@@ -55,7 +55,7 @@ class token_types:
         If the optional ``token`` parameter is not provided, this will
         usually allocate a new token.
 
-        If th eoptional ``token`` parameter is provided, this function
+        If the optional ``token`` parameter is provided, this function
         **may** choose to use the provided (subclass of) ``Token`` as
         the returned token.  This allows the opportunity for the system
         to avoid allocating memory for the token.

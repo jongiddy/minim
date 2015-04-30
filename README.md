@@ -13,7 +13,7 @@ To print the non-markup content of an XML file, we could use:
 
 ```python
 
-for token in minim.lex.tokens(string_iter):
+for token in minim.read.TokenReader(string_iter):
 	if token.is_content:
 		sys.stdout.write(token.content)
 ```
@@ -24,7 +24,7 @@ A more efficient way to do this is to use:
 
 ```python
 
-token_types = minim.lex.token_types(string_iter)
+token_types = minim.read.Reader(string_iter)
 for token_type in token_types:
 	if token_type.is_content:
 		token = token_types.get_token(token_type)
@@ -39,7 +39,7 @@ the ``get_token`` call:
 ```python
 
 content_token = minim.tokens.Content()
-token_types = minim.lex.token_types(string_iter)
+token_types = minim.read.Reader(string_iter)
 for token_type in token_types:
 	if token_type.is_content:
 		token = token_types.get_token(token_type, content_token)
