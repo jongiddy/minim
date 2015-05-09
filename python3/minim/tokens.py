@@ -63,3 +63,43 @@ class Content(Token):
 class Markup(Token):
 
     is_markup = True
+
+
+class SingletonMarkup(Markup):
+
+    """A token that always has the same representation.
+
+    In this case, the class can represent the token."""
+
+    is_token = True
+
+    def __init__(self, *args):
+        raise NotImplementedError('cannot instantiate SingletonMarkup class')
+
+    @classmethod
+    def emit(cls):
+        yield cls
+
+    @classmethod
+    def literal_bytes(cls, encoding):
+        """Return the literal bytes from the source.
+
+        :param string encoding: Character encoding for returned
+            literal."""
+        return cls.literal.encode(encoding)
+
+
+class EndTagOpenSingleton(SingletonMarkup):
+    literal = '</'
+
+
+class EndTagCloseSingleton(SingletonMarkup):
+    literal = '>'
+
+
+class ProcessingInstructionOpenSingleton(SingletonMarkup):
+    literal = '<?'
+
+
+class ProcessingInstructionCloseSingleton(SingletonMarkup):
+    literal = '?>'
