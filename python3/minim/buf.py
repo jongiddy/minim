@@ -1,6 +1,6 @@
 class Buffer:
 
-    """The Buffer class makes an iterator look like a single buffer."""
+    """The Buffer class makes an iterable look like a single buffer."""
 
     def __init__(self, string_iter):
         self.iter = iter(string_iter)
@@ -11,7 +11,12 @@ class Buffer:
     def ensure(self, n=1):
         """Ensure that a minimum number of characters are available.
 
-        :param int n: The minimum number of characters that wanted.
+        The buffer may be changed by this operation.
+
+        :param int n: The minimum number of characters wanted.
+        :return int: The current position in the buffer, or -1 if EOF
+            was reached before reading ``n`` characters
+        :raise: EOFError if the buffer is empty and the EOF is reached
         """
         buf = self.buf
         current = self.current
@@ -32,7 +37,11 @@ class Buffer:
                     # Alternatively, we've processed the entire buffer, and we
                     # now have nothing left to process, in which case we
                     # propagate the exception.
-                    if not buf:
+                    if buf:
+                        self.buf = buf
+                        self.current = current
+                        return -1
+                    else:
                         # We really have reached the end
                         raise EOFError()
             self.buf = buf
@@ -82,8 +91,15 @@ class Buffer:
 
         :return int: the index at which the sentinel was found, or -1 if
             the sentinel was not found."""
+        start = self.ensure(len(sentinel))
         buf = self.buf
-        self.start = start = self.ensure(len(sentinel))
+        if start < 0:
+            # EOF and remaining characters < sentinel length
+            # -> sentinel can never appear
+            self.start = self.current
+            self.current = len(buf)
+            return -1
+        self.start = start
         loc = buf.find(sentinel, start)
         if loc < 0:
             # If sentinel is not found, check whether the last characters
@@ -104,9 +120,9 @@ class Buffer:
     def starts_with(self, s):
         """Test whether the current buffer starts with a string."""
         start = self.ensure(len(s))
-        if self.buf.startswith(s, start):
+        if start < 0 or not self.buf.startswith(s, start):
+            return False
+        else:
             self.start = start
             self.current = start + len(s)
             return True
-        else:
-            return False
