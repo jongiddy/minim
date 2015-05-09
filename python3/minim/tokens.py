@@ -65,6 +65,11 @@ class Markup(Token):
     is_markup = True
 
 
+class ImmutableTokenException(Exception):
+
+    pass
+
+
 class SingletonMarkup(Markup):
 
     """A token that always has the same representation.
@@ -75,6 +80,9 @@ class SingletonMarkup(Markup):
 
     def __init__(self, *args):
         raise NotImplementedError('cannot instantiate SingletonMarkup class')
+
+    def set(self, **kw):
+        raise ImmutableTokenException('Immutable token cannot be modified')
 
     @classmethod
     def emit(cls):
