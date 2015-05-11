@@ -1,6 +1,6 @@
-class Buffer:
+class IterableAsSequence:
 
-    """The Buffer class makes an iterable look like a single buffer."""
+    """Make an iterable of character sequences look like a single sequence."""
 
     def __init__(self, string_iter):
         self._iter = iter(string_iter)

@@ -1,41 +1,41 @@
 import tempfile
 import unittest
 
-from minim import buf
+from minim import iterseq
 
 
-class BufferInitTest(unittest.TestCase):
+class IterableAsSequenceInitTest(unittest.TestCase):
 
     def test_list_is_ok(self):
-        b = buf.Buffer(['Hello, ', 'World!'])
-        self.assertEqual(b.get(), 'H')
+        buf = iterseq.IterableAsSequence(['Hello, ', 'World!'])
+        self.assertEqual(buf.get(), 'H')
 
     def test_empty_is_ok(self):
-        b = buf.Buffer([])
+        buf = iterseq.IterableAsSequence([])
         with self.assertRaises(StopIteration):
-            b.next()
+            buf.next()
 
     def test_bytes_are_ok(self):
-        b = buf.Buffer([b'Hello', b'World!'])
-        self.assertEqual(b.get(), b'H'[0])
+        buf = iterseq.IterableAsSequence([b'Hello', b'World!'])
+        self.assertEqual(buf.get(), b'H'[0])
 
     def test_non_iterable_fails(self):
         with self.assertRaises(TypeError):
-            buf.Buffer(5)
+            iterseq.IterableAsSequence(5)
 
     def test_file_is_ok(self):
         with tempfile.TemporaryFile('w+t') as f:
             f.write('Hello, World!\n')
             f.seek(0)
-            b = buf.Buffer(f)
-            self.assertEqual(b.get(), 'H')
+            buf = iterseq.IterableAsSequence(f)
+            self.assertEqual(buf.get(), 'H')
 
 
-class BufferTest(unittest.TestCase):
+class IterableAsSequenceTest(unittest.TestCase):
 
     def setUp(self):
         self.s = ['Hello, ', 'World!']
-        self.buf = buf.Buffer(['Hello, ', 'World!'])
+        self.buf = iterseq.IterableAsSequence(['Hello, ', 'World!'])
 
     def test_pop(self):
         s = self.buf.get()
