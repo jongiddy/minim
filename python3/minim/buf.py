@@ -4,7 +4,7 @@ class Buffer:
 
     def __init__(self, string_iter):
         self.iter = iter(string_iter)
-        self.buf = next(self.iter)
+        self.buf = None
         self.start = 0
         self.current = 0
 
@@ -19,6 +19,8 @@ class Buffer:
         :raise: EOFError if the buffer is empty and the EOF is reached
         """
         buf = self.buf
+        if buf is None:
+            buf = self.buf = next(self.iter)
         current = self.current
         if len(buf) - current < n:
             if current > 0:

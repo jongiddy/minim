@@ -3,6 +3,17 @@ import unittest
 from minim import buf
 
 
+class BufferInitTest(unittest.TestCase):
+
+    def test_list_is_ok(self):
+        buf.Buffer(['Hello, ', 'World!'])
+
+    def test_empty_is_ok(self):
+        b = buf.Buffer([])
+        with self.assertRaises(StopIteration):
+            b.next()
+
+
 class BufferTest(unittest.TestCase):
 
     def setUp(self):
