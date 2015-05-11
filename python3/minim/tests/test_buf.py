@@ -6,12 +6,17 @@ from minim import buf
 class BufferInitTest(unittest.TestCase):
 
     def test_list_is_ok(self):
-        buf.Buffer(['Hello, ', 'World!'])
+        b = buf.Buffer(['Hello, ', 'World!'])
+        self.assertEqual(b.get(), 'H')
 
     def test_empty_is_ok(self):
         b = buf.Buffer([])
         with self.assertRaises(StopIteration):
             b.next()
+
+    def test_non_iterable_fails(self):
+        with self.assertRaises(TypeError):
+            buf.Buffer(5)
 
 
 class BufferTest(unittest.TestCase):
