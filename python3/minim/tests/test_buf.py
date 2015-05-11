@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 
 from minim import buf
@@ -14,9 +15,20 @@ class BufferInitTest(unittest.TestCase):
         with self.assertRaises(StopIteration):
             b.next()
 
+    def test_bytes_are_ok(self):
+        b = buf.Buffer([b'Hello', b'World!'])
+        self.assertEqual(b.get(), b'H'[0])
+
     def test_non_iterable_fails(self):
         with self.assertRaises(TypeError):
             buf.Buffer(5)
+
+    def test_file_is_ok(self):
+        with tempfile.TemporaryFile('w+t') as f:
+            f.write('Hello, World!\n')
+            f.seek(0)
+            b = buf.Buffer(f)
+            self.assertEqual(b.get(), 'H')
 
 
 class BufferTest(unittest.TestCase):
