@@ -116,7 +116,7 @@ class PatternParser:
     stop_iteration_found = StopIteration(True)
     stop_iteration_not_found = StopIteration(False)
 
-    def __init__(self, pat, allow_not_found):
+    def __init__(self, pat):
         self.pat = pat
 
     def __call__(self, buf, token_type):
