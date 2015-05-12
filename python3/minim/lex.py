@@ -193,7 +193,6 @@ class TokenGenerator:
         self.parse_name = NameParser()
         self.parse_whitespace = WhitespaceParserXML10()
         self.parse_to_sentinel = SentinelParser()
-        self.invalid_markup = LiteralResponder()
 
     def parse_markup(self, buf):
         assert buf.get() == '<'
@@ -235,7 +234,8 @@ class TokenGenerator:
                     assert buf.extract() == '-->'
                     yield tokens.CommentCloseSingleton
                 else:
-                    yield from self.invalid_markup(tokens.InvalidMarkup, '<!-')
+                    yield tokens.LiteralLessThanContent
+                    yield tokens.LiteralExclamationMarkDash
             elif ch == '[':
                 if buf.starts_with('CDATA['):
                     yield tokens.CDataOpenSingleton
@@ -246,7 +246,8 @@ class TokenGenerator:
                     # declaration
                     ...
             else:
-                yield from self.invalid_markup(tokens.InvalidMarkup, '<!')
+                yield tokens.LiteralLessThanContent
+                yield tokens.LiteralExclamationMark
         else:
             yield tokens.StartOrEmptyTagOpenSingleton
             if not (yield from self.parse_name(buf, tokens.TagName)):
