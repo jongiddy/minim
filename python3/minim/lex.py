@@ -142,7 +142,7 @@ class PatternParser:
                 self.stopped = self.stop_iteration_found
             else:
                 self.stopped = self.stop_iteration_not_found
-            if not self.is_final:
+            if not self.is_initial and not self.is_final:
                 self.is_final = True
                 return self.token_type
             else:

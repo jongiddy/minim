@@ -11,15 +11,24 @@ class Token:
     is_token = False      # Is this a token_type (class) or a token (instance)
     is_content = False    # Is this content
     is_markup = False     # or is it markup
+    # If markup is not valid, we treat it as content, but set is_invalid
     is_invalid = False    # Is this content that has not been escaped correctly
+    # Markup sub-classes
     is_structure = False  # Is this markup structural (<, etc.)
     is_name = False       # Is this markup a name?
     is_data = False       # Is this markup data?
+    # If data is emitted in multiple sections, we mark the initial and
+    # final blocks
+    is_initial = True     # Is this an initial section?
+    is_final = True       # Is this a final section?
 
-    def __init__(self, literal=None, encoding=None):
+    def __init__(
+            self, literal=None, encoding=None, is_initial=True, is_final=True):
         self.is_token = True
         self._literal = literal
         self._encoding = encoding
+        self.is_initial = is_initial
+        self.is_final = is_final
 
     def set(self, **kw):
         self._literal = kw.get('literal')
