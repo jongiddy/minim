@@ -178,9 +178,7 @@ class WhitespaceParserXML10(PatternParser):
 class NameParser(PatternParser):
 
     # Simple pattern, with most commonly expected non-name characters.
-    # Lots of values would pass this filter, despite not being valid
-    # names, e.g.: 123, -123, .343
-    pattern = re.compile(r'[^ \t\r\n<>/?!=]+')
+    pattern = re.compile(r'[^-.0-9 \t\r\n<>/?!=][^ \t\r\n<>/?!=]*')
 
     def __init__(self):
         super().__init__(self.pattern)
