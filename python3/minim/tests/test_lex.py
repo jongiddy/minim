@@ -29,3 +29,30 @@ class WhitespaceParserTests(unittest.TestCase):
             next(parse_whitespace)
         # Test that StopIteration indicates found is False
         self.assertIs(stop.exception.value, False)
+
+
+class TokenGeneratorMarkupTests(unittest.TestCase):
+
+    def test_parse_markup(self):
+        xml = '<tag foo="bar">'
+        expected_tokens = [
+            (tokens.StartOrEmptyTagOpenSingleton, '<'),
+            (tokens.TagName, 'tag'),
+            (tokens.Whitespace, ' '),
+            (tokens.AttributeName, 'foo'),
+            (tokens.AttributeEqualsSingleton, '='),
+            (tokens.AttributeValueDoubleOpenSingleton, '"'),
+            (tokens.AttributeValue, 'bar'),
+            (tokens.AttributeValueDoubleCloseSingleton, '"'),
+            (tokens.StartTagCloseSingleton, '>')
+            ]
+        buf = iterseq.IterableAsSequence([xml])
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse_markup(buf)
+        for token_type, expected in zip(token_types, expected_tokens):
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            self.assertEqual(token_type, expected[0])
+            self.assertEqual(token.literal, expected[1])

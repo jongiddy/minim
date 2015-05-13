@@ -256,7 +256,8 @@ class TokenGenerator:
             ch = buf.get()
             while ch not in ('>', '/'):
                 if not ws_found:
-                    raise RuntimeError('Expected whitespace, >, or />')
+                    raise RuntimeError(
+                        'Expected whitespace, >, or />, found %r' % ch)
                 if not (yield from self.parse_name(buf, tokens.AttributeName)):
                     raise RuntimeError('Expected attribute name')
                 yield from self.parse_whitespace(buf, tokens.Whitespace)
@@ -271,6 +272,7 @@ class TokenGenerator:
                             yield tokens.AttributeValueDoubleOpenSingleton
                         else:
                             yield tokens.AttributeValueSingleOpenSingleton
+                        buf.advance()
                         yield from self.parse_to_sentinel(
                             buf, tokens.AttributeValue, ch)
                         if ch == '"':
