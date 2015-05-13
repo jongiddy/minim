@@ -136,8 +136,8 @@ class PatternParser:
             raise self.stopped
         if self.found:
             self.is_initial = False
-        remain = self.buf.matching(self.pat)
-        if remain < 0:
+        matched = self.buf.matching(self.pat)
+        if matched == 0:
             if self.found:
                 self.stopped = self.stop_iteration_found
             else:
@@ -149,7 +149,7 @@ class PatternParser:
                 raise self.stopped
         else:
             self.found = True
-            if remain > 0:
+            if matched < 0:
                 self.is_final = True
                 self.stopped = self.stop_iteration_found
             return self.token_type
@@ -193,103 +193,112 @@ class TokenGenerator:
         self.parse_to_sentinel = SentinelParser()
 
     def parse_markup(self, buf):
-        assert buf.get() == '<'
-        ch = buf.next()
-        if ch == '/':
-            yield tokens.EndTagOpenSingleton
-            buf.advance()
-            if not (yield from self.parse_name(buf, tokens.TagName)):
-                raise RuntimeError('Expected name')
-            yield from self.parse_whitespace(buf, tokens.Whitespace)
-            ch = buf.get()
-            if ch != '>':
-                raise RuntimeError('extra data in close tag')
-            yield tokens.EndTagCloseSingleton
-            buf.advance()
-        elif ch == '?':
-            yield tokens.ProcessingInstructionOpenSingleton
-            if not (yield from self.parse_name(
-                    buf, tokens.ProcessingInstructionTarget)):
-                raise RuntimeError('Expected name')
-            ws_after_name = yield from self.parse_whitespace(
-                buf, tokens.Whitespace)
-            if not buf.starts_with('?>'):
-                if not ws_after_name:
-                    raise RuntimeError('Expected ?>')
-                yield from self.parse_to_sentinel(
-                    buf, tokens.ProcessingInstructionData, '?>')
-            assert buf.extract() == '?>'
-            yield tokens.ProcessingInstructionCloseSingleton
-        elif ch == '!':
+        try:
+            assert buf.get() == '<'
             ch = buf.next()
-            if ch == '-':
-                ch = buf.next()
-                if ch == '-':
-                    yield tokens.CommentOpenSingleton
-                    buf.advance()
-                    yield from self.parse_to_sentinel(
-                        buf, tokens.CommentData, '-->')
-                    assert buf.extract() == '-->'
-                    yield tokens.CommentCloseSingleton
-                else:
-                    yield tokens.LiteralLessThanContent
-                    yield tokens.LiteralExclamationMarkDash
-            elif ch == '[':
-                if buf.starts_with('CDATA['):
-                    yield tokens.CDataOpenSingleton
-                    yield from self.parse_to_sentinel(buf, tokens.CData, ']]>')
-                    assert buf.extract() == ']]>'
-                    yield tokens.CDataCloseSingleton
-                else:
-                    # declaration
-                    ...
-            else:
-                yield tokens.LiteralLessThanContent
-                yield tokens.LiteralExclamationMark
-        else:
-            yield tokens.StartOrEmptyTagOpenSingleton
-            if not (yield from self.parse_name(buf, tokens.TagName)):
-                raise RuntimeError('Expected tag name')
-            ws_found = yield from self.parse_whitespace(buf, tokens.Whitespace)
-            ch = buf.get()
-            while ch not in ('>', '/'):
-                if not ws_found:
-                    raise RuntimeError(
-                        'Expected whitespace, >, or />, found %r' % ch)
-                if not (yield from self.parse_name(buf, tokens.AttributeName)):
-                    raise RuntimeError('Expected attribute name')
+            if ch == '/':
+                yield tokens.EndTagOpenSingleton
+                buf.advance()
+                if not (yield from self.parse_name(buf, tokens.TagName)):
+                    raise RuntimeError('Expected name')
                 yield from self.parse_whitespace(buf, tokens.Whitespace)
                 ch = buf.get()
-                if ch == '=':
-                    yield tokens.AttributeEqualsSingleton
-                    buf.advance()
-                    yield from self.parse_whitespace(buf, tokens.Whitespace)
-                    ch = buf.get()
-                    if ch in ('"', "'"):
-                        if ch == '"':
-                            yield tokens.AttributeValueDoubleOpenSingleton
-                        else:
-                            yield tokens.AttributeValueSingleOpenSingleton
+                if ch != '>':
+                    raise RuntimeError('extra data in close tag')
+                yield tokens.EndTagCloseSingleton
+                buf.advance()
+            elif ch == '?':
+                yield tokens.ProcessingInstructionOpenSingleton
+                if not (yield from self.parse_name(
+                        buf, tokens.ProcessingInstructionTarget)):
+                    raise RuntimeError('Expected name')
+                ws_after_name = yield from self.parse_whitespace(
+                    buf, tokens.Whitespace)
+                if not buf.starts_with('?>'):
+                    if not ws_after_name:
+                        raise RuntimeError('Expected ?>')
+                    yield from self.parse_to_sentinel(
+                        buf, tokens.ProcessingInstructionData, '?>')
+                assert buf.extract() == '?>'
+                yield tokens.ProcessingInstructionCloseSingleton
+            elif ch == '!':
+                ch = buf.next()
+                if ch == '-':
+                    ch = buf.next()
+                    if ch == '-':
+                        yield tokens.CommentOpenSingleton
                         buf.advance()
                         yield from self.parse_to_sentinel(
-                            buf, tokens.AttributeValue, ch)
-                        if ch == '"':
-                            yield tokens.AttributeValueDoubleCloseSingleton
-                        else:
-                            yield tokens.AttributeValueSingleCloseSingleton
+                            buf, tokens.CommentData, '-->')
+                        assert buf.extract() == '-->'
+                        yield tokens.CommentCloseSingleton
                     else:
-                        # HTML fallback - need a parser to read un-quoted
-                        # attribute
-                        raise RuntimeError()
-                    ws_found = yield from self.parse_whitespace(
-                        buf, tokens.Whitespace)
-                    ch = buf.get()
-            if ch == '>':
-                yield tokens.StartTagCloseSingleton
+                        yield tokens.LiteralLessThanContent
+                        yield tokens.LiteralExclamationMarkDash
+                elif ch == '[':
+                    if buf.starts_with('CDATA['):
+                        yield tokens.CDataOpenSingleton
+                        yield from self.parse_to_sentinel(
+                            buf, tokens.CData, ']]>')
+                        assert buf.extract() == ']]>'
+                        yield tokens.CDataCloseSingleton
+                    else:
+                        # declaration
+                        ...
+                else:
+                    yield tokens.LiteralLessThanContent
+                    yield tokens.LiteralExclamationMark
             else:
-                assert ch == '/'
-                ch = buf.next()
-                if ch != '>':
-                    raise RuntimeError('Expected />')
-                yield tokens.EmptyTagCloseSingleton
-            buf.advance()
+                yield tokens.StartOrEmptyTagOpenSingleton
+                if not (yield from self.parse_name(buf, tokens.TagName)):
+                    raise RuntimeError('Expected tag name')
+                ws_found = yield from self.parse_whitespace(
+                    buf, tokens.Whitespace)
+                ch = buf.get()
+                while ch not in ('>', '/'):
+                    if not ws_found:
+                        raise RuntimeError(
+                            'Expected whitespace, >, or />, found %r' % ch)
+                    if not (yield from self.parse_name(
+                            buf, tokens.AttributeName)):
+                        raise RuntimeError('Expected attribute name')
+                    yield from self.parse_whitespace(buf, tokens.Whitespace)
+                    ch = buf.get()
+                    if ch == '=':
+                        yield tokens.AttributeEqualsSingleton
+                        buf.advance()
+                        yield from self.parse_whitespace(
+                            buf, tokens.Whitespace)
+                        ch = buf.get()
+                        if ch in ('"', "'"):
+                            if ch == '"':
+                                yield tokens.AttributeValueDoubleOpenSingleton
+                            else:
+                                yield tokens.AttributeValueSingleOpenSingleton
+                            buf.advance()
+                            yield from self.parse_to_sentinel(
+                                buf, tokens.AttributeValue, ch)
+                            if ch == '"':
+                                yield tokens.AttributeValueDoubleCloseSingleton
+                            else:
+                                yield tokens.AttributeValueSingleCloseSingleton
+                        else:
+                            # HTML fallback - need a parser to read un-quoted
+                            # attribute
+                            raise RuntimeError()
+                        ws_found = yield from self.parse_whitespace(
+                            buf, tokens.Whitespace)
+                        ch = buf.get()
+                if ch == '>':
+                    yield tokens.StartTagCloseSingleton
+                else:
+                    assert ch == '/'
+                    ch = buf.next()
+                    if ch != '>':
+                        raise RuntimeError('Expected />')
+                    yield tokens.EmptyTagCloseSingleton
+                buf.advance()
+        except EOFError:
+            # swallow EOFError, as we want to return normally, to trigger
+            # StopIteration
+            pass

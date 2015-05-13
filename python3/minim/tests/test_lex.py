@@ -19,6 +19,27 @@ class NameParserTests(unittest.TestCase):
         # Test that StopIteration indicates found is True
         self.assertIs(stop.exception.value, True)
 
+    def test_parser_matches_name_eof(self):
+        s = 'foo'
+        buf = iterseq.IterableAsSequence([s])
+        parse_name = lex.NameParser()
+        parse_name(buf, tokens.TagName)
+        parse_name = iter(parse_name)
+        self.assertIs(next(parse_name), tokens.TagName)
+        token = parse_name.send(tokens.TagName)
+        self.assertEqual(token.literal, 'foo')
+        self.assertIs(token.is_initial, True)
+        self.assertIs(token.is_final, False)
+        self.assertIs(next(parse_name), tokens.TagName)
+        token = parse_name.send(tokens.TagName)
+        self.assertEqual(token.literal, '')
+        self.assertIs(token.is_initial, False)
+        self.assertIs(token.is_final, True)
+        with self.assertRaises(StopIteration) as stop:
+            next(parse_name)
+        # Test that StopIteration indicates found is True
+        self.assertIs(stop.exception.value, True)
+
     def test_parser_fails_with_dot(self):
         s = '.foo'
         buf = iterseq.IterableAsSequence([s])
@@ -42,6 +63,27 @@ class WhitespaceParserTests(unittest.TestCase):
         self.assertIs(next(parse_whitespace), tokens.Whitespace)
         token = parse_whitespace.send(tokens.Whitespace)
         self.assertEqual(token.literal, ' ' * 3)
+        with self.assertRaises(StopIteration) as stop:
+            next(parse_whitespace)
+        # Test that StopIteration indicates found is True
+        self.assertIs(stop.exception.value, True)
+
+    def test_parser_matches_space_eof(self):
+        s = ' ' * 3
+        buf = iterseq.IterableAsSequence([s])
+        parse_whitespace = lex.WhitespaceParserXML10()
+        parse_whitespace(buf, tokens.Whitespace)
+        parse_whitespace = iter(parse_whitespace)
+        self.assertIs(next(parse_whitespace), tokens.Whitespace)
+        token = parse_whitespace.send(tokens.Whitespace)
+        self.assertEqual(token.literal, ' ' * 3)
+        self.assertIs(token.is_initial, True)
+        self.assertIs(token.is_final, False)
+        self.assertIs(next(parse_whitespace), tokens.Whitespace)
+        token = parse_whitespace.send(tokens.Whitespace)
+        self.assertEqual(token.literal, '')
+        self.assertIs(token.is_initial, False)
+        self.assertIs(token.is_final, True)
         with self.assertRaises(StopIteration) as stop:
             next(parse_whitespace)
         # Test that StopIteration indicates found is True

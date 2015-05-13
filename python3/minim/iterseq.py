@@ -36,16 +36,9 @@ class IterableAsSequence:
                 except StopIteration:
                     # If we get StopIteration, we may have some stuff left
                     # in buf, which we need to process first.
-                    # Alternatively, we've processed the entire buffer, and we
-                    # now have nothing left to process, in which case we
-                    # propagate the exception.
-                    if buf:
-                        self._buf = buf
-                        self._current = current
-                        return -1
-                    else:
-                        # We really have reached the end
-                        raise EOFError()
+                    self._buf = buf
+                    self._current = current
+                    return -1
             self._buf = buf
             self._current = current
         assert self._buf
@@ -54,6 +47,8 @@ class IterableAsSequence:
     def get(self):
         """Return the character at the current location."""
         current = self.ensure(1)
+        if current < 0:
+            raise EOFError()
         return self._buf[current]
 
     def advance(self, n=1):
@@ -76,17 +71,31 @@ class IterableAsSequence:
 
     def matching(self, pat):
         """
-        :return: -1 if no match, else known number of characters after match
+        :return:
+            +n there is a match of length n,
+                and subsequent call may match more;
+            -n there is a match of length n,
+                and subsequent call will not match;
+            0 there is no match, and ``extract`` will return an empty string.
+            For non-zero return, ``extract`` will return the matched string.
         """
-        current = self.ensure(1)
-        result = pat.match(self._buf, current)
+        start = self.ensure(1)
+        if start < 0:
+            # at EOF - we don't raise EOFError, as calling code may need
+            # to yield an is_final token
+            self._start = self._current
+            return 0
+        result = pat.match(self._buf, start)
         if result:
-            self._start = current
-            self._current = result.end()
-            return len(self._buf) - self._current
+            self._start = start
+            self._current = current = result.end()
+            if current == len(self._buf):
+                return current - start
+            else:
+                return start - current
         else:
-            self._start = current
-            return -1
+            self._start = self._current
+            return 0
 
     def match_to_sentinel(self, sentinel):
         """Find the location of a string in the current buffer.
