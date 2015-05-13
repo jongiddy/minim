@@ -203,7 +203,7 @@ class TokenGenerator:
             if not (yield from self.parse_name(buf, tokens.TagName)):
                 raise RuntimeError('Expected name')
             yield from self.parse_whitespace(buf, tokens.Whitespace)
-            ch = buf.next()
+            ch = buf.get()
             if ch != '>':
                 raise RuntimeError('extra data in close tag')
             yield tokens.EndTagCloseSingleton

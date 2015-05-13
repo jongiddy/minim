@@ -57,6 +57,25 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             self.assertEqual(token_type, expected[0])
             self.assertEqual(token.literal, expected[1])
 
+    def test_parse_end_tag(self):
+        xml = '</ns:tag>'
+        expected_tokens = [
+            (tokens.EndTagOpenSingleton, '</'),
+            (tokens.TagName, 'ns:tag'),
+            (tokens.EndTagCloseSingleton, '>')
+            ]
+        buf = iterseq.IterableAsSequence([xml])
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse_markup(buf)
+        for token_type, expected in zip(token_types, expected_tokens):
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            self.assertEqual(token_type, expected[0])
+            self.assertEqual(token.literal, expected[1])
+            print(token_type, token.literal)
+
     def test_parse_empty_tag(self):
         xml = '<tag\tfoo="bar"\n\t/>'
         expected_tokens = [
