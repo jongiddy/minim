@@ -48,7 +48,7 @@ class IterableAsSequence:
         """Return the character at the current location."""
         current = self.ensure(1)
         if current < 0:
-            raise EOFError()
+            return self._buf[:0]  # Empty buffer of same type
         return self._buf[current]
 
     def advance(self, n=1):

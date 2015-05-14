@@ -39,14 +39,12 @@ class IterableAsSequenceTest(unittest.TestCase):
         self.buf = iterseq.IterableAsSequence(self.s)
 
     def test_pop(self):
-        try:
-            s = self.buf.get()
-            while True:
-                s += self.buf.next()
-        except EOFError:
-            self.assertEqual(s, ''.join(self.s))
-        else:
-            self.fail('No EOFError')
+        s = self.buf.get()
+        ch = self.buf.next()
+        while ch:
+            s += ch
+            ch = self.buf.next()
+        self.assertEqual(s, ''.join(self.s))
 
     def test_matching_to_eof(self):
         pat = re.compile(r'[A-Za-z ,!]+')
