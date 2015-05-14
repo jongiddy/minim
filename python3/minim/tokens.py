@@ -11,6 +11,7 @@ class Token:
     is_token = False      # Is this a token_type (class) or a token (instance)
     is_content = False    # Is this content
     is_markup = False     # or is it markup
+    is_control = False    # small number of non-markup, non-content tokens
     # If markup is not valid, we treat it as content, but set is_invalid
     is_invalid = False    # Is this content that has not been escaped correctly
     # Markup sub-classes
@@ -33,6 +34,8 @@ class Token:
     def set(self, **kw):
         self._literal = kw.get('literal')
         self._encoding = kw.get('encoding')
+        self.is_initial = kw.get('is_initial', True)
+        self.is_final = kw.get('is_final', True)
 
     @property
     def literal(self):
@@ -57,8 +60,8 @@ class Content(Token):
 
     is_content = True
 
-    def __init__(self, literal=None, encoding=None, content=Undefined):
-        super().__init__(literal, encoding)
+    def __init__(self, literal=None, encoding=None, content=Undefined, **kw):
+        super().__init__(literal, encoding, **kw)
         self._content = content
 
     def set(self, **kw):
@@ -274,3 +277,31 @@ class LiteralExclamationMarkDashSingleton(SingletonContent):
     literal = '!-'
 
 
+class SingletonControl(Token):
+
+    is_token = True
+    is_control = True
+
+    def __init__(self, *args):
+        raise NotImplementedError('cannot instantiate SingletonMarkup class')
+
+    def set(self, **kw):
+        raise ImmutableTokenException('Immutable token cannot be modified')
+
+    @classmethod
+    def emit(cls):
+        yield cls
+
+    @classmethod
+    def literal_bytes(cls, encoding):
+        """Return the literal bytes from the source.
+
+        :param string encoding: Character encoding for returned
+            literal."""
+        return cls.literal.encode(encoding)
+
+
+class InvalidEndSingleton(SingletonMarkup):
+
+    literal = ''
+    is_invalid = True

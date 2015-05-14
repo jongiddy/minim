@@ -78,3 +78,41 @@ class IterableAsSequenceTest(unittest.TestCase):
         self.assertGreater(self.buf.matching(pat), 0)
         self.assertEqual(self.buf.extract(), self.s[1])
         self.assertEqual(self.buf.matching(pat), 0)
+
+    def test_match_to_sentinel(self):
+        result = self.buf.match_to_sentinel(',')
+        self.assertLess(result, 0)
+        length = -result
+        self.assertEqual(self.buf.extract(), self.s[0][:length])
+        self.assertEqual(self.buf.get(), ',')
+
+    def test_match_to_sentinel_over_next(self):
+        length = self.buf.match_to_sentinel(', W')
+        self.assertGreater(length, 0)
+        self.assertEqual(self.buf.extract(), self.s[0][:-2])
+        self.assertEqual(self.buf.get(), self.s[0][-2:-1])
+        result = self.buf.match_to_sentinel(', W')
+        self.assertEqual(result, 0)
+        self.assertEqual(self.buf.extract(), '')
+        self.assertEqual(self.buf.get(), ',')
+
+    def test_match_to_sentinel_after_next(self):
+        length = self.buf.match_to_sentinel('!')
+        self.assertGreater(length, 0)
+        self.assertEqual(self.buf.extract(), self.s[0])
+        result = self.buf.match_to_sentinel('!')
+        self.assertLess(result, 0)
+        length = -result
+        self.assertEqual(self.buf.extract(), self.s[1][:length])
+        self.assertEqual(self.buf.get(), '!')
+
+    def test_match_to_sentinel_no_match(self):
+        length = self.buf.match_to_sentinel('XXX')
+        self.assertGreater(length, 0)
+        self.assertEqual(self.buf.extract(), self.s[0])
+        length = self.buf.match_to_sentinel('XXX')
+        self.assertGreater(length, 0)
+        self.assertEqual(self.buf.extract(), self.s[1])
+        with self.assertRaises(EOFError):
+            self.buf.match_to_sentinel('XXX')
+        self.assertEqual(self.buf.get(), '')

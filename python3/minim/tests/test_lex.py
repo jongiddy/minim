@@ -101,6 +101,59 @@ class WhitespaceParserTests(unittest.TestCase):
         self.assertIs(stop.exception.value, False)
 
 
+class SentinelParserTests(unittest.TestCase):
+
+    def test_parser_matches_sentinel_at_start(self):
+        s = '?>fix'
+        buf = iterseq.IterableAsSequence([s])
+        parse_sentinel = lex.SentinelParser()
+        parse_sentinel(buf, tokens.Content, '?>')
+        parse_sentinel = iter(parse_sentinel)
+        with self.assertRaises(StopIteration):
+            next(parse_sentinel)
+        self.assertEqual(buf.extract(), '')
+        self.assertEqual(buf.get(), '?')
+
+    def test_parser_matches_sentinel_after_start(self):
+        s = 'more?>fix'
+        buf = iterseq.IterableAsSequence([s])
+        parse_sentinel = lex.SentinelParser()
+        parse_sentinel(buf, tokens.Content, '?>')
+        parse_sentinel = iter(parse_sentinel)
+        self.assertIs(next(parse_sentinel), tokens.Content)
+        token = parse_sentinel.send(tokens.Content)
+        self.assertEqual(token.literal, 'more')
+        with self.assertRaises(StopIteration):
+            next(parse_sentinel)
+        self.assertEqual(buf.extract(), '')
+        self.assertEqual(buf.get(), '?')
+
+    def test_parser_fails_on_empty_string(self):
+        s = ''
+        buf = iterseq.IterableAsSequence([s])
+        parse_sentinel = lex.SentinelParser()
+        parse_sentinel(buf, tokens.Content, '?>')
+        parse_sentinel = iter(parse_sentinel)
+        with self.assertRaises(EOFError):
+            next(parse_sentinel)
+        self.assertEqual(buf.extract(), '')
+        self.assertEqual(buf.get(), '')
+
+    def test_parser_fails_on_no_sentinel(self):
+        s = 'morefix'
+        buf = iterseq.IterableAsSequence([s])
+        parse_sentinel = lex.SentinelParser()
+        parse_sentinel(buf, tokens.Content, '?>')
+        parse_sentinel = iter(parse_sentinel)
+        self.assertIs(next(parse_sentinel), tokens.Content)
+        token = parse_sentinel.send(tokens.Content)
+        self.assertEqual(token.literal, 'morefix')
+        with self.assertRaises(EOFError):
+            next(parse_sentinel)
+        self.assertEqual(buf.extract(), '')
+        self.assertEqual(buf.get(), '')
+
+
 class TokenGeneratorMarkupTests(unittest.TestCase):
 
     def test_parse_open_tag(self):
@@ -180,7 +233,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             ]
         buf = iterseq.IterableAsSequence([xml])
         scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse_markup(buf)
+        token_types = scanner.parse()
         for token_type, expected in zip(token_types, expected_tokens):
             if token_type.is_token:
                 token = token_type
@@ -200,5 +253,4 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         self.assertEqual(
             next(token_types), tokens.StartOrEmptyTagOpenSingleton)
         with self.assertRaises(RuntimeError):
-            x = next(token_types)
-            print(x, repr(token_types.send(x).literal))
+            next(token_types)

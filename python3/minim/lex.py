@@ -1,5 +1,4 @@
 import re
-import warnings
 
 from minim import tokens
 
@@ -51,17 +50,25 @@ class SentinelParser:
     def __next__(self):
         if self.stopped is not None:
             raise self.stopped
-        if self.buf.starts_with(self.sentinel) and not self.needs_final:
-            self.stopped = self.stop_iteration
-            raise self.stopped
         if self.needs_final:
             self.is_initial = False
         loc = self.buf.match_to_sentinel(self.sentinel)
         if loc < 0:
-            self.needs_final = True
-        else:
+            # sentinel found, but need to handle content first
             self.is_final = True
             self.needs_final = False
+        elif loc == 0:
+            # sentinel found at start of string
+            self.stopped = self.stop_iteration
+            if self.needs_final:
+                self.is_final = True
+                self.needs_final = False
+            else:
+                raise self.stopped
+        else:
+            # content to emit, but sentinel not found
+            self.is_final = False
+            self.needs_final = True
         return self.token_type
 
     def send(self, val):
@@ -192,6 +199,14 @@ class TokenGenerator:
         self.parse_whitespace = WhitespaceParserXML10()
         self.parse_to_sentinel = SentinelParser()
 
+    def parse(self):
+        try:
+            yield from self.parse_markup(self.buf)
+        except EOFError:
+            # If an uncaught EOFError reaches here, emit a token to
+            # inform the caller that the EOF was unexpected.
+            yield tokens.InvalidEndSingleton
+
     def parse_markup(self, buf):
         assert buf.get() == '<'
         ch = buf.next()
@@ -218,6 +233,7 @@ class TokenGenerator:
                     raise RuntimeError('Expected ?>')
                 yield from self.parse_to_sentinel(
                     buf, tokens.ProcessingInstructionData, '?>')
+            self.advance(len('?>'))
             assert buf.extract() == '?>'
             yield tokens.ProcessingInstructionCloseSingleton
         elif ch == '!':
@@ -229,6 +245,7 @@ class TokenGenerator:
                     buf.advance()
                     yield from self.parse_to_sentinel(
                         buf, tokens.CommentData, '-->')
+                    buf.advance(len('-->'))
                     assert buf.extract() == '-->'
                     yield tokens.CommentCloseSingleton
                 else:
@@ -238,6 +255,7 @@ class TokenGenerator:
                 if buf.starts_with('CDATA['):
                     yield tokens.CDataOpenSingleton
                     yield from self.parse_to_sentinel(buf, tokens.CData, ']]>')
+                    buf.advance(len(']]>'))
                     assert buf.extract() == ']]>'
                     yield tokens.CDataCloseSingleton
                 else:
@@ -277,6 +295,7 @@ class TokenGenerator:
                             yield tokens.AttributeValueDoubleCloseSingleton
                         else:
                             yield tokens.AttributeValueSingleCloseSingleton
+                        buf.advance()
                     else:
                         # HTML fallback - need a parser to read un-quoted
                         # attribute

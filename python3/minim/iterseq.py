@@ -52,8 +52,12 @@ class IterableAsSequence:
         return self._buf[current]
 
     def advance(self, n=1):
-        """Advance the current location."""
-        self._current += n
+        """Advance the current location.
+
+        ``extract`` will return the skipped characters.
+        """
+        self._start = start = self._current
+        self._current = start + n
 
     def next(self):
         """Move to the next character, and return it."""
@@ -100,16 +104,24 @@ class IterableAsSequence:
     def match_to_sentinel(self, sentinel):
         """Find the location of a string in the current buffer.
 
-        :return int: the index at which the sentinel was found, or -1 if
-            the sentinel was not found."""
+        :return:
+            +n there is content of length n, and subsequent call may match more
+            -n there is content of length n, followed by sentinel
+            0 there is no content, sentinel only
+            ``extract`` will return the content before the sentinel.
+        :raise: ``EOFError`` if no content and no sentinel before EOF
+        """
         start = self.ensure(len(sentinel))
         buf = self._buf
         if start < 0:
             # EOF and remaining characters < sentinel length
             # -> sentinel can never appear
-            self._start = self._current
-            self._current = len(buf)
-            return -1
+            if len(buf) == 0:
+                raise EOFError()
+            else:
+                self._start = start
+                self._current = len(buf)
+                return len(buf) - start
         self._start = start
         loc = buf.find(sentinel, start)
         if loc < 0:
@@ -123,10 +135,15 @@ class IterableAsSequence:
                 self._current = len(buf) - len(sentinel)
             else:
                 self._current = len(buf)
-            return -1
+            return self._current - start
+        elif loc == start:
+            # sentinel found at start of buffer
+            self._current = start
+            return 0
         else:
+            # sentinel found after start of buffer
             self._current = loc
-            return loc - start
+            return start - loc
 
     def starts_with(self, s):
         """Test whether the current buffer starts with a string."""
