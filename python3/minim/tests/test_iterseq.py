@@ -46,6 +46,31 @@ class IterableAsSequenceTest(unittest.TestCase):
             ch = self.buf.next()
         self.assertEqual(s, ''.join(self.s))
 
+    def test_matching(self):
+        pat = re.compile(r'[A-Za-z]+')
+        result = self.buf.matching(pat)
+        self.assertLess(result, 0)
+        length = -result
+        self.assertEqual(self.buf.extract(), self.s[0][:length])
+        self.assertEqual(self.buf.get(), ',')
+
+    def test_matching_over_next(self):
+        pat = re.compile(r'[A-Za-z ,]+')
+        result = self.buf.matching(pat)
+        self.assertGreater(result, 0)
+        self.assertEqual(self.buf.extract(), self.s[0])
+        self.assertEqual(self.buf.get(), self.s[1][:1])
+        result = self.buf.matching(pat)
+        self.assertLess(result, 0)
+        length = -result
+        self.assertEqual(self.buf.extract(), self.s[1][:length])
+        self.assertEqual(self.buf.get(), '!')
+
+    def test_matching_no_match(self):
+        pat = re.compile(r'[ ]+')
+        self.assertEqual(self.buf.matching(pat), 0)
+        self.assertEqual(self.buf.get(), 'H')
+
     def test_matching_to_eof(self):
         pat = re.compile(r'[A-Za-z ,!]+')
         self.assertGreater(self.buf.matching(pat), 0)
