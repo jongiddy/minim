@@ -185,10 +185,20 @@ class WhitespaceParserXML10(PatternParser):
 class NameParser(PatternParser):
 
     # Simple pattern, with most commonly expected non-name characters.
-    pattern = re.compile(r'[^-.0-9 \t\r\n<>/?!=][^ \t\r\n<>/?!=]*')
+    initial = re.compile(r'[^-.0-9 \t\r\n<>/?!=][^ \t\r\n<>/?!=]*')
+    pattern = re.compile(r'[^ \t\r\n<>/?!=]+')
 
     def __init__(self):
         super().__init__(self.pattern)
+
+    def __next__(self):
+        if self.found:
+            # we have already found the initial section
+            self.pat = self.pattern
+        else:
+            # looking for an initial name character
+            self.pat = self.initial
+        return super().__next__()
 
 
 class TokenGenerator:

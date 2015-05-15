@@ -51,6 +51,25 @@ class NameParserTests(unittest.TestCase):
         # Test that StopIteration indicates found is False
         self.assertIs(stop.exception.value, False)
 
+    def test_parser_ok_with_nonfirst_on_next_start(self):
+        # valid name, but invalid first char on buffer boundary
+        s = ['foo', '-bar>']
+        buf = iterseq.IterableAsSequence(s)
+        parse_name = lex.NameParser()
+        parse_name(buf, tokens.TagName)
+        parse_name = iter(parse_name)
+        self.assertIs(next(parse_name), tokens.TagName)
+        token = parse_name.send(tokens.TagName)
+        self.assertEqual(token.literal, 'foo')
+        self.assertIs(token.is_initial, True)
+        self.assertIs(token.is_final, False)
+        self.assertIs(next(parse_name), tokens.TagName)
+        token = parse_name.send(tokens.TagName)
+        self.assertEqual(token.literal, '-bar')
+        self.assertIs(token.is_initial, False)
+        self.assertIs(token.is_final, True)
+        self.assertEqual(buf.get(), '>')
+
 
 class WhitespaceParserTests(unittest.TestCase):
 
