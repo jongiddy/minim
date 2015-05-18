@@ -118,6 +118,7 @@ class WhitespaceParserTests(unittest.TestCase):
             next(parse_whitespace)
         # Test that StopIteration indicates found is False
         self.assertIs(stop.exception.value, False)
+        self.assertEqual(buf.get(), 'f')
 
 
 class SentinelParserTests(unittest.TestCase):
@@ -261,15 +262,97 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             self.assertEqual(token_type, expected[0])
             self.assertEqual(token.literal, expected[1])
 
-    def test_parse_invalid_comment(self):
-        # TODO make this emit a LiteralLessThanContentSingleton, and
-        # comment is then data
-        xml = '<-- hello -->'
+    def test_parse_empty_comment(self):
+        xml = "<!---->"
+        expected_tokens = [
+            (tokens.CommentOpenSingleton, '<!--'),
+            (tokens.CommentCloseSingleton, '-->')
+            ]
         buf = iterseq.IterableAsSequence([xml])
         scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse_markup(buf)
-        token_types = iter(token_types)
-        self.assertEqual(
-            next(token_types), tokens.StartOrEmptyTagOpenSingleton)
-        with self.assertRaises(RuntimeError):
-            next(token_types)
+        token_types = scanner.parse()
+        for token_type, expected in zip(token_types, expected_tokens):
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            self.assertEqual(token_type, expected[0])
+            self.assertEqual(token.literal, expected[1])
+
+    def test_parse_invalid_comment(self):
+        # As non-well-formed markup, this is interpreted as content, but
+        # has attribute ``is_well_formed`` set to False for the < character
+        xml = '<-- hello -->'
+        expected_tokens = [
+            (tokens.BadlyFormedLessThanSingleton, '<', False),
+            (tokens.PCData, '-- hello -->', True)
+            ]
+        buf = iterseq.IterableAsSequence([xml])
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse()
+        for token_type, expected in zip(token_types, expected_tokens):
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            self.assertEqual(token_type, expected[0])
+            self.assertEqual(token.literal, expected[1])
+            self.assertIs(token_type.is_well_formed, expected[2])
+
+    def test_parse_processing_instruction(self):
+        xml = "<?xml foo bar?>"
+        expected_tokens = [
+            (tokens.ProcessingInstructionOpenSingleton, '<?'),
+            (tokens.ProcessingInstructionTarget, 'xml'),
+            (tokens.Whitespace, ' '),
+            (tokens.ProcessingInstructionData, 'foo bar'),
+            (tokens.ProcessingInstructionCloseSingleton, '?>')
+            ]
+        buf = iterseq.IterableAsSequence([xml])
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse()
+        for token_type, expected in zip(token_types, expected_tokens):
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            self.assertEqual(token_type, expected[0])
+            self.assertEqual(token.literal, expected[1])
+
+    def test_parse_empty_processing_instruction(self):
+        xml = "<?xml?>"
+        expected_tokens = [
+            (tokens.ProcessingInstructionOpenSingleton, '<?'),
+            (tokens.ProcessingInstructionTarget, 'xml'),
+            (tokens.ProcessingInstructionCloseSingleton, '?>')
+            ]
+        buf = iterseq.IterableAsSequence([xml])
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse()
+        for token_type, expected in zip(token_types, expected_tokens):
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            self.assertEqual(token_type, expected[0])
+            self.assertEqual(token.literal, expected[1])
+
+    @unittest.skip('should pass when content is handled')
+    def test_parse_invalid_processing_instruction(self):
+        xml = '<??>'
+        buf = iterseq.IterableAsSequence([xml])
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse()
+        not_well_formed = False
+        s = ''
+        for token_type in token_types:
+            if not token_type.is_well_formed:
+                not_well_formed = True
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            if token_type.is_content:
+                s += token.content
+            self.assertIs(not_well_formed, True)
+            self.assertEqual(s, xml)

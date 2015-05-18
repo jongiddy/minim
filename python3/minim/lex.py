@@ -23,12 +23,7 @@ def token_type_generator(string_iter):
 
 class SentinelParser:
 
-    """A non-allocating iterator for a sentinel.
-
-    When this iterator ends, the buffer will contain the sentinel.
-    That is, calling buf.extract() will return the sentinel, and
-    subsequent matches will start from after the sentinel.
-    """
+    """A non-allocating iterator for a sentinel."""
 
     # Pre-allocated return value
     stop_iteration = StopIteration()
@@ -184,9 +179,10 @@ class WhitespaceParserXML10(PatternParser):
 
 class NameParser(PatternParser):
 
-    # Simple pattern, with most commonly expected non-name characters.
-    initial = re.compile(r'[^-.0-9 \t\r\n<>/?!=][^ \t\r\n<>/?!=]*')
-    pattern = re.compile(r'[^ \t\r\n<>/?!=]+')
+    disallowed = ''' \t\r\n!"#$%&'()*+,/;<=>?@[\\]^`{|}~'''
+    initial_disallowed = '-.0-9' + disallowed
+    initial = re.compile('[^{}][^{}]*'.format(initial_disallowed, disallowed))
+    pattern = re.compile('[^{}]+'.format(disallowed))
 
     def __init__(self):
         super().__init__(self.pattern)
@@ -199,6 +195,10 @@ class NameParser(PatternParser):
             # looking for an initial name character
             self.pat = self.initial
         return super().__next__()
+
+    def matches_name(self, s):
+        """Return whether the start of the string looks like a name."""
+        return self.initial.match(s) is not None
 
 
 class TokenGenerator:
@@ -215,37 +215,44 @@ class TokenGenerator:
         except EOFError:
             # If an uncaught EOFError reaches here, emit a token to
             # inform the caller that the EOF was unexpected.
-            yield tokens.InvalidEndSingleton
+            yield tokens.BadlyFormedEndOfStreamSingleton
 
     def parse_markup(self, buf):
         assert buf.get() == '<'
         ch = buf.next()
         if ch == '/':
-            yield tokens.EndTagOpenSingleton
-            buf.advance()
-            if not (yield from self.parse_name(buf, tokens.TagName)):
-                raise RuntimeError('Expected name')
-            yield from self.parse_whitespace(buf, tokens.Whitespace)
-            ch = buf.get()
-            if ch != '>':
-                raise RuntimeError('extra data in close tag')
-            yield tokens.EndTagCloseSingleton
-            buf.advance()
+            ch = buf.next()
+            if self.parse_name.matches_name(ch):
+                yield tokens.EndTagOpenSingleton
+                yield from self.parse_name(buf, tokens.TagName)
+                yield from self.parse_whitespace(buf, tokens.Whitespace)
+                ch = buf.get()
+                if ch != '>':
+                    raise RuntimeError('extra data in close tag')
+                yield tokens.EndTagCloseSingleton
+                buf.advance()
+            else:
+                yield tokens.BadlyFormedLessThanSingleton
+                yield tokens.PCData(literal='/')
         elif ch == '?':
-            yield tokens.ProcessingInstructionOpenSingleton
-            if not (yield from self.parse_name(
-                    buf, tokens.ProcessingInstructionTarget)):
-                raise RuntimeError('Expected name')
-            ws_after_name = yield from self.parse_whitespace(
-                buf, tokens.Whitespace)
-            if not buf.starts_with('?>'):
-                if not ws_after_name:
-                    raise RuntimeError('Expected ?>')
-                yield from self.parse_to_sentinel(
-                    buf, tokens.ProcessingInstructionData, '?>')
-            self.advance(len('?>'))
-            assert buf.extract() == '?>'
-            yield tokens.ProcessingInstructionCloseSingleton
+            ch = buf.next()
+            if self.parse_name.matches_name(ch):
+                yield tokens.ProcessingInstructionOpenSingleton
+                yield from self.parse_name(
+                    buf, tokens.ProcessingInstructionTarget)
+                ws_after_name = yield from self.parse_whitespace(
+                    buf, tokens.Whitespace)
+                if not buf.starts_with('?>'):
+                    if not ws_after_name:
+                        raise RuntimeError('Expected ?>')
+                    yield from self.parse_to_sentinel(
+                        buf, tokens.ProcessingInstructionData, '?>')
+                    buf.advance(len('?>'))
+                    assert buf.extract() == '?>', repr(buf.extract())
+                yield tokens.ProcessingInstructionCloseSingleton
+            else:
+                yield tokens.BadlyFormedLessThanSingleton
+                yield tokens.PCData(literal='?')
         elif ch == '!':
             ch = buf.next()
             if ch == '-':
@@ -259,8 +266,10 @@ class TokenGenerator:
                     assert buf.extract() == '-->'
                     yield tokens.CommentCloseSingleton
                 else:
-                    yield tokens.LiteralLessThanContent
-                    yield tokens.LiteralExclamationMarkDash
+                    # < does not appear to be well-formed markup - emit a
+                    # literal <
+                    yield tokens.BadlyFormedLessThanSingleton
+                    yield tokens.PCData(literal='!-')
             elif ch == '[':
                 if buf.starts_with('CDATA['):
                     yield tokens.CDataOpenSingleton
@@ -272,9 +281,10 @@ class TokenGenerator:
                     # declaration
                     ...
             else:
-                yield tokens.LiteralLessThanContent
-                yield tokens.LiteralExclamationMark
-        else:
+                # < does not appear to be well-formed markup - emit a literal <
+                yield tokens.BadlyFormedLessThanSingleton
+                yield tokens.PCData(literal='!')
+        elif self.parse_name.matches_name(ch):
             yield tokens.StartOrEmptyTagOpenSingleton
             if not (yield from self.parse_name(buf, tokens.TagName)):
                 raise RuntimeError('Expected tag name')
@@ -322,3 +332,6 @@ class TokenGenerator:
                     raise RuntimeError('Expected />')
                 yield tokens.EmptyTagCloseSingleton
             buf.advance()
+        else:
+            # < does not appear to be well-formed markup - emit a literal <
+            yield tokens.BadlyFormedLessThanSingleton

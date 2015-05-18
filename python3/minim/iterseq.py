@@ -56,7 +56,8 @@ class IterableAsSequence:
 
         ``extract`` will return the skipped characters.
         """
-        self._start = start = self._current
+        start = self.ensure(n)
+        self._start = start
         self._current = start + n
 
     def next(self):
@@ -146,7 +147,13 @@ class IterableAsSequence:
             return start - loc
 
     def starts_with(self, s):
-        """Test whether the current buffer starts with a string."""
+        """Test whether the current buffer starts with a string.
+
+        If the buffer does start with the string, the string is consumed
+        and can be retrieved using the ``extract`` method.  If the
+        buffer does not start with the string, nothing is consumed and
+        the result of ``extract`` is undefined.
+        """
         start = self.ensure(len(s))
         if start < 0 or not self._buf.startswith(s, start):
             return False

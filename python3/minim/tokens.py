@@ -8,20 +8,21 @@ Undefined = Singleton()
 
 class Token:
 
-    is_token = False      # Is this a token_type (class) or a token (instance)
-    is_content = False    # Is this content
-    is_markup = False     # or is it markup
-    is_control = False    # small number of non-markup, non-content tokens
-    # If markup is not valid, we treat it as content, but set is_invalid
-    is_invalid = False    # Is this content that has not been escaped correctly
+    is_token = False       # Is this a token_type (class) or a token (instance)
+    is_content = False     # Is this content
+    is_markup = False      # or is it markup
+    is_control = False     # small number of non-markup, non-content tokens
+    # If markup is not valid, we treat it as content, but set
+    # is_well_formed to False
+    is_well_formed = True  # Is this content well-formed
     # Markup sub-classes
-    is_structure = False  # Is this markup structural (<, etc.)
-    is_name = False       # Is this markup a name?
-    is_data = False       # Is this markup data?
+    is_structure = False   # Is this markup structural (<, etc.)
+    is_name = False        # Is this markup a name?
+    is_data = False        # Is this markup data?
     # If data is emitted in multiple sections, we mark the initial and
     # final blocks
-    is_initial = True     # Is this an initial section?
-    is_final = True       # Is this a final section?
+    is_initial = True      # Is this an initial section?
+    is_final = True        # Is this a final section?
 
     def __init__(
             self, literal=None, encoding=None, is_initial=True, is_final=True):
@@ -232,7 +233,7 @@ class PCData(Content):
     pass
 
 
-class SingletonContent(Content):
+class SingletonContent(PCData):
 
     """A token that always has the same representation.
 
@@ -264,17 +265,10 @@ class SingletonContent(Content):
         return cls.literal.encode(encoding)
 
 
-class LiteralLessThanContentSingleton(SingletonContent):
-    is_invalid = True
+class BadlyFormedLessThanSingleton(SingletonContent):
+    is_well_formed = False
     literal = '<'
-
-
-class LiteralExclamationMarkSingleton(SingletonContent):
-    literal = '!'
-
-
-class LiteralExclamationMarkDashSingleton(SingletonContent):
-    literal = '!-'
+    content = '<'
 
 
 class SingletonControl(Token):
@@ -301,7 +295,7 @@ class SingletonControl(Token):
         return cls.literal.encode(encoding)
 
 
-class InvalidEndSingleton(SingletonMarkup):
-
+class BadlyFormedEndOfStreamSingleton(SingletonMarkup):
+    is_well_formed = False
     literal = ''
-    is_invalid = True
+    content = ''

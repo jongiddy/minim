@@ -116,3 +116,17 @@ class IterableAsSequenceTest(unittest.TestCase):
         with self.assertRaises(EOFError):
             self.buf.match_to_sentinel('XXX')
         self.assertEqual(self.buf.get(), '')
+
+    def test_starts_with(self):
+        self.assertIs(self.buf.starts_with('He'), True)
+        self.assertEqual(self.buf.extract(), 'He')
+        self.assertEqual(self.buf.get(), 'l')
+
+    def test_starts_with_over_next(self):
+        self.assertIs(self.buf.starts_with('Hello, Worl'), True)
+        self.assertEqual(self.buf.extract(), 'Hello, Worl')
+        self.assertEqual(self.buf.get(), 'd')
+
+    def test_starts_with_no_match(self):
+        self.assertIs(self.buf.starts_with('ABC'), False)
+        self.assertEqual(self.buf.get(), 'H')
