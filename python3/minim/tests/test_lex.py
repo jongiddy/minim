@@ -501,3 +501,26 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
                 token = token_types.send(token_type)
             self.assertEqual(token_type, expected[0])
             self.assertEqual(token.literal, expected[1])
+
+    def test_literal_ok(self):
+        xml = [
+            '<?xml version="1.0"?><some tags="',
+            'foo">This <!-- a comment -->is',
+            'some </s',
+            'ome>text'
+            ]
+        buf = iterseq.IterableAsSequence(xml)
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse()
+        literal = ''
+        content = ''
+        for token_type in token_types:
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            literal += token.literal
+            if token_type.is_content:
+                content += token.content
+        self.assertEqual(literal, ''.join(xml))
+        self.assertEqual(content, 'This issome text')
