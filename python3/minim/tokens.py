@@ -48,8 +48,8 @@ class Token:
     def literal_bytes(self, encoding):
         """Return the literal bytes from the source.
 
-        :param string encoding: Character encoding for returned
-            literal."""
+        :param string encoding: Character encoding for returned literal.
+        """
         if encoding == self._encoding:
             bytes = self._literal
         else:
@@ -110,8 +110,8 @@ class SingletonMarkup(Markup):
     def literal_bytes(cls, encoding):
         """Return the literal bytes from the source.
 
-        :param string encoding: Character encoding for returned
-            literal."""
+        :param string encoding: Character encoding for returned literal.
+        """
         return cls.literal.encode(encoding)
 
 
@@ -119,11 +119,11 @@ class MarkupWhitespace(Markup):
     is_structure = True
 
 
-class StartOrEmptyTagOpenSingleton(SingletonMarkup):
+class StartOrEmptyTagOpenToken(SingletonMarkup):
     literal = '<'
 
 
-class EndTagOpenSingleton(SingletonMarkup):
+class EndTagOpenToken(SingletonMarkup):
     literal = '</'
 
 
@@ -135,7 +135,7 @@ class AttributeName(Markup):
     is_name = True
 
 
-class AttributeEqualsSingleton(SingletonMarkup):
+class AttributeEqualsToken(SingletonMarkup):
     literal = '='
 
 
@@ -143,11 +143,11 @@ class AttributeValueOpen(SingletonMarkup):
     pass
 
 
-class AttributeValueDoubleOpenSingleton(AttributeValueOpen):
+class AttributeValueDoubleOpenToken(AttributeValueOpen):
     literal = '"'
 
 
-class AttributeValueSingleOpenSingleton(AttributeValueOpen):
+class AttributeValueSingleOpenToken(AttributeValueOpen):
     literal = "'"
 
 
@@ -159,27 +159,27 @@ class AttributeValueClose(SingletonMarkup):
     pass
 
 
-class AttributeValueDoubleCloseSingleton(AttributeValueClose):
+class AttributeValueDoubleCloseToken(AttributeValueClose):
     literal = '"'
 
 
-class AttributeValueSingleCloseSingleton(AttributeValueClose):
+class AttributeValueSingleCloseToken(AttributeValueClose):
     literal = "'"
 
 
-class StartTagCloseSingleton(SingletonMarkup):
+class StartTagCloseToken(SingletonMarkup):
     literal = '>'
 
 
-class EmptyTagCloseSingleton(SingletonMarkup):
+class EmptyTagCloseToken(SingletonMarkup):
     literal = '/>'
 
 
-class EndTagCloseSingleton(SingletonMarkup):
+class EndTagCloseToken(SingletonMarkup):
     literal = '>'
 
 
-class ProcessingInstructionOpenSingleton(SingletonMarkup):
+class ProcessingInstructionOpenToken(SingletonMarkup):
     literal = '<?'
 
 
@@ -191,11 +191,11 @@ class ProcessingInstructionData(Markup):
     is_data = True
 
 
-class ProcessingInstructionCloseSingleton(SingletonMarkup):
+class ProcessingInstructionCloseToken(SingletonMarkup):
     literal = '?>'
 
 
-class CommentOpenSingleton(SingletonMarkup):
+class CommentOpenToken(SingletonMarkup):
     literal = '<!--'
 
 
@@ -203,11 +203,11 @@ class CommentData(Markup):
     is_data = True
 
 
-class CommentCloseSingleton(SingletonMarkup):
+class CommentCloseToken(SingletonMarkup):
     literal = '-->'
 
 
-class CDataOpenSingleton(SingletonMarkup):
+class CDataOpenToken(SingletonMarkup):
     literal = '<[CDATA['
 
 
@@ -215,13 +215,13 @@ class CData(Content):
     pass
 
 
-class CDataCloseSingleton(SingletonMarkup):
+class CDataCloseToken(SingletonMarkup):
     literal = ']]>'
 
 
 class WhitespaceContent(Content):
 
-    """MarkupWhitespace that occurs after markup and before any non-space content.
+    """Whitespace that occurs after markup and before any non-space content.
 
     Separating this into a separate token allows higher-level parsers to
     quickly identify all-whitespace gaps between markup without having
@@ -260,12 +260,12 @@ class SingletonContent(PCData):
     def literal_bytes(cls, encoding):
         """Return the literal bytes from the source.
 
-        :param string encoding: Character encoding for returned
-            literal."""
+        :param string encoding: Character encoding for returned literal.
+        """
         return cls.literal.encode(encoding)
 
 
-class BadlyFormedLessThanSingleton(SingletonContent):
+class BadlyFormedLessThanToken(SingletonContent):
     is_well_formed = False
     literal = '<'
     content = '<'
@@ -290,12 +290,12 @@ class SingletonControl(Token):
     def literal_bytes(cls, encoding):
         """Return the literal bytes from the source.
 
-        :param string encoding: Character encoding for returned
-            literal."""
+        :param string encoding: Character encoding for returned literal.
+        """
         return cls.literal.encode(encoding)
 
 
-class BadlyFormedEndOfStreamSingleton(SingletonMarkup):
+class BadlyFormedEndOfStreamToken(SingletonMarkup):
     is_well_formed = False
     literal = ''
     content = ''

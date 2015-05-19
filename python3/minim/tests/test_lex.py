@@ -211,15 +211,15 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_parse_open_tag(self):
         xml = '<tag foo="bar">'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenSingleton, '<'),
+            (tokens.StartOrEmptyTagOpenToken, '<'),
             (tokens.TagName, 'tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'foo'),
-            (tokens.AttributeEqualsSingleton, '='),
-            (tokens.AttributeValueDoubleOpenSingleton, '"'),
+            (tokens.AttributeEqualsToken, '='),
+            (tokens.AttributeValueDoubleOpenToken, '"'),
             (tokens.AttributeValue, 'bar'),
-            (tokens.AttributeValueDoubleCloseSingleton, '"'),
-            (tokens.StartTagCloseSingleton, '>')
+            (tokens.AttributeValueDoubleCloseToken, '"'),
+            (tokens.StartTagCloseToken, '>')
             ]
         buf = iterseq.IterableAsSequence([xml])
         scanner = lex.TokenGenerator(buf)
@@ -235,9 +235,9 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_parse_end_tag(self):
         xml = '</ns:tag>'
         expected_tokens = [
-            (tokens.EndTagOpenSingleton, '</'),
+            (tokens.EndTagOpenToken, '</'),
             (tokens.TagName, 'ns:tag'),
-            (tokens.EndTagCloseSingleton, '>')
+            (tokens.EndTagCloseToken, '>')
             ]
         buf = iterseq.IterableAsSequence([xml])
         scanner = lex.TokenGenerator(buf)
@@ -253,16 +253,16 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_parse_empty_tag(self):
         xml = '<tag\tfoo="bar"\n\t/>'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenSingleton, '<'),
+            (tokens.StartOrEmptyTagOpenToken, '<'),
             (tokens.TagName, 'tag'),
             (tokens.MarkupWhitespace, '\t'),
             (tokens.AttributeName, 'foo'),
-            (tokens.AttributeEqualsSingleton, '='),
-            (tokens.AttributeValueDoubleOpenSingleton, '"'),
+            (tokens.AttributeEqualsToken, '='),
+            (tokens.AttributeValueDoubleOpenToken, '"'),
             (tokens.AttributeValue, 'bar'),
-            (tokens.AttributeValueDoubleCloseSingleton, '"'),
+            (tokens.AttributeValueDoubleCloseToken, '"'),
             (tokens.MarkupWhitespace, '\n\t'),
-            (tokens.EmptyTagCloseSingleton, '/>')
+            (tokens.EmptyTagCloseToken, '/>')
             ]
         buf = iterseq.IterableAsSequence([xml])
         scanner = lex.TokenGenerator(buf)
@@ -278,10 +278,10 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_parse_comment(self):
         xml = "<!-- Lot's of text, including technically invalid -- -->"
         expected_tokens = [
-            (tokens.CommentOpenSingleton, '<!--'),
+            (tokens.CommentOpenToken, '<!--'),
             (tokens.CommentData,
                 " Lot's of text, including technically invalid -- "),
-            (tokens.CommentCloseSingleton, '-->')
+            (tokens.CommentCloseToken, '-->')
             ]
         buf = iterseq.IterableAsSequence([xml])
         scanner = lex.TokenGenerator(buf)
@@ -297,8 +297,8 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_parse_empty_comment(self):
         xml = "<!---->"
         expected_tokens = [
-            (tokens.CommentOpenSingleton, '<!--'),
-            (tokens.CommentCloseSingleton, '-->')
+            (tokens.CommentOpenToken, '<!--'),
+            (tokens.CommentCloseToken, '-->')
             ]
         buf = iterseq.IterableAsSequence([xml])
         scanner = lex.TokenGenerator(buf)
@@ -316,7 +316,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         # has attribute ``is_well_formed`` set to False for the < character
         xml = '<-- hello -->'
         expected_tokens = [
-            (tokens.BadlyFormedLessThanSingleton, '<', False),
+            (tokens.BadlyFormedLessThanToken, '<', False),
             (tokens.PCData, '-- hello -->', True)
             ]
         buf = iterseq.IterableAsSequence([xml])
@@ -334,11 +334,11 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_parse_processing_instruction(self):
         xml = "<?xml foo bar?>"
         expected_tokens = [
-            (tokens.ProcessingInstructionOpenSingleton, '<?'),
+            (tokens.ProcessingInstructionOpenToken, '<?'),
             (tokens.ProcessingInstructionTarget, 'xml'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.ProcessingInstructionData, 'foo bar'),
-            (tokens.ProcessingInstructionCloseSingleton, '?>')
+            (tokens.ProcessingInstructionCloseToken, '?>')
             ]
         buf = iterseq.IterableAsSequence([xml])
         scanner = lex.TokenGenerator(buf)
@@ -354,9 +354,9 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_parse_empty_processing_instruction(self):
         xml = "<?xml?>"
         expected_tokens = [
-            (tokens.ProcessingInstructionOpenSingleton, '<?'),
+            (tokens.ProcessingInstructionOpenToken, '<?'),
             (tokens.ProcessingInstructionTarget, 'xml'),
-            (tokens.ProcessingInstructionCloseSingleton, '?>')
+            (tokens.ProcessingInstructionCloseToken, '?>')
             ]
         buf = iterseq.IterableAsSequence([xml])
         scanner = lex.TokenGenerator(buf)
@@ -424,9 +424,9 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         xml = "some content<tag>"
         expected_tokens = [
             (tokens.PCData, 'some content'),
-            (tokens.StartOrEmptyTagOpenSingleton, '<'),
+            (tokens.StartOrEmptyTagOpenToken, '<'),
             (tokens.TagName, 'tag'),
-            (tokens.StartTagCloseSingleton, '>')
+            (tokens.StartTagCloseToken, '>')
             ]
         buf = iterseq.IterableAsSequence([xml])
         scanner = lex.TokenGenerator(buf)
@@ -442,9 +442,9 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_parse_markup_content(self):
         xml = "<tag>some content"
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenSingleton, '<'),
+            (tokens.StartOrEmptyTagOpenToken, '<'),
             (tokens.TagName, 'tag'),
-            (tokens.StartTagCloseSingleton, '>'),
+            (tokens.StartTagCloseToken, '>'),
             (tokens.PCData, 'some content'),
             ]
         buf = iterseq.IterableAsSequence([xml])
