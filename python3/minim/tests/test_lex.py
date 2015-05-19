@@ -104,7 +104,7 @@ class WhitespaceParserTests(unittest.TestCase):
     def test_parser_matches_space(self):
         s = ' ' * 3 + 'foo'
         buf = iterseq.IterableAsSequence([s])
-        parse_whitespace = lex.WhitespaceParserXML10()
+        parse_whitespace = lex.WhitespaceParser()
         parse_whitespace(buf, tokens.MarkupWhitespace)
         parse_whitespace = iter(parse_whitespace)
         self.assertIs(next(parse_whitespace), tokens.MarkupWhitespace)
@@ -118,7 +118,7 @@ class WhitespaceParserTests(unittest.TestCase):
     def test_parser_matches_space_eof(self):
         s = ' ' * 3
         buf = iterseq.IterableAsSequence([s])
-        parse_whitespace = lex.WhitespaceParserXML10()
+        parse_whitespace = lex.WhitespaceParser()
         parse_whitespace(buf, tokens.MarkupWhitespace)
         parse_whitespace = iter(parse_whitespace)
         self.assertIs(next(parse_whitespace), tokens.MarkupWhitespace)
@@ -139,7 +139,7 @@ class WhitespaceParserTests(unittest.TestCase):
     def test_parser_empty_on_no_space(self):
         s = 'foo'
         buf = iterseq.IterableAsSequence([s])
-        parse_whitespace = lex.WhitespaceParserXML10()
+        parse_whitespace = lex.WhitespaceParser()
         parse_whitespace(buf, tokens.MarkupWhitespace)
         parse_whitespace = iter(parse_whitespace)
         with self.assertRaises(StopIteration) as stop:

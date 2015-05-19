@@ -169,7 +169,7 @@ class PatternParser:
         return val
 
 
-class WhitespaceParserXML10(PatternParser):
+class WhitespaceParser(PatternParser):
 
     pattern = re.compile(r'[ \t\r\n]+')
 
@@ -207,7 +207,7 @@ class TokenGenerator:
     def __init__(self, buf):
         self.buf = buf
         self.parse_name = NameParser()
-        self.parse_space = WhitespaceParserXML10()
+        self.parse_space = WhitespaceParser()
         self.parse_until = SentinelParser()
 
     def parse(self):
