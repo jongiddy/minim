@@ -179,26 +179,27 @@ class WhitespaceParserXML10(PatternParser):
 
 class NameParser(PatternParser):
 
-    disallowed = r''']\s!"#$%&'()*+,/;<=>?@[\\^`{|}~'''  # ] must be first
-    initial_disallowed = disallowed + r'.\d-'            # - must be last
-    initial = re.compile('[^{}][^{}]*'.format(initial_disallowed, disallowed))
-    pattern = re.compile('[^{}]+'.format(disallowed))
+    allowed = r'\w:.-'
+    invalid_initial = re.compile(r'[\d.-]')
+    pattern = re.compile('[{}]+'.format(allowed))
 
     def __init__(self):
         super().__init__(self.pattern)
 
     def __next__(self):
-        if self.found:
-            # we have already found the initial section
-            self.pat = self.pattern
-        else:
-            # looking for an initial name character
-            self.pat = self.initial
+        if (not self.found and
+                self.buf.matching(self.invalid_initial, extract=False)):
+            # initial character might match pattern, but is disallowed
+            # as initial name character, so exit here.
+            self.stopped = self.stop_iteration_not_found
+            raise self.stopped
         return super().__next__()
 
     def matches_name(self, s):
         """Return whether the start of the string looks like a name."""
-        return self.initial.match(s) is not None
+        return (
+            not self.invalid_initial.match(s) and
+            bool(self.pattern.match(s[:1])))
 
 
 class TokenGenerator:

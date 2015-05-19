@@ -70,6 +70,34 @@ class NameParserTests(unittest.TestCase):
         self.assertIs(token.is_final, True)
         self.assertEqual(buf.get(), '>')
 
+    def test_letters_are_names(self):
+        parse_name = lex.NameParser()
+        chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+        self.assertIs(parse_name.matches_name(chars), True)
+        for char in chars:
+            self.assertIs(parse_name.matches_name(char), True, repr(char))
+
+    def test_spaces_are_not_names(self):
+        parse_name = lex.NameParser()
+        chars = ' \t\n\f\v'
+        self.assertIs(parse_name.matches_name(chars), False)
+        for char in chars:
+            self.assertIs(parse_name.matches_name(char), False, repr(char))
+
+    def test_symbols_are_not_names(self):
+        parse_name = lex.NameParser()
+        chars = ' !"£$%^&*()-+=~#@<>&?,.'
+        self.assertIs(parse_name.matches_name(chars), False)
+        for char in chars:
+            self.assertIs(parse_name.matches_name(char), False, repr(char))
+
+    def test_numbers_are_not_names(self):
+        parse_name = lex.NameParser()
+        chars = '0123456789'
+        self.assertIs(parse_name.matches_name(chars), False)
+        for char in chars:
+            self.assertIs(parse_name.matches_name(char), False, repr(char))
+
 
 class WhitespaceParserTests(unittest.TestCase):
 

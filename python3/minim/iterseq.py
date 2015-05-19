@@ -74,13 +74,16 @@ class IterableAsSequence:
         else:
             return buf[start:current]
 
-    def matching(self, pat):
+    def matching(self, pat, extract=True):
         """
         :return:
             +n there is a match of length n,
                 and subsequent call may match more;
             -n there is a match of length n,
                 and subsequent call will not match;
+            If parameter `extract` is False, any match pattern is not consumed,
+            and method `extract` will be empty.  If parameter `extract` is True
+            (the default):
             0 there is no match, and ``extract`` will return an empty string.
             For non-zero return, ``extract`` will return the matched string.
         """
@@ -93,7 +96,9 @@ class IterableAsSequence:
         result = pat.match(self._buf, start)
         if result:
             self._start = start
-            self._current = current = result.end()
+            current = result.end()
+            if extract:
+                self._current = current
             if current == len(self._buf):
                 return current - start
             else:
