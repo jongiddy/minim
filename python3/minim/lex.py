@@ -219,7 +219,7 @@ class TokenGenerator:
             yield tokens.BadlyFormedEndOfStreamSingleton
 
     def parse_markup(self, buf):
-        # MarkupWhitespace before initial non-ws is not considered to be content
+        # Whitespace before initial non-ws is not considered to be content
         yield from self.parse_whitespace(buf, tokens.MarkupWhitespace)
         yield from self.parse_to_sentinel(buf, tokens.PCData, '<')
         while buf.get() == '<':
@@ -256,7 +256,6 @@ class TokenGenerator:
                     yield tokens.ProcessingInstructionCloseSingleton
                 else:
                     yield tokens.BadlyFormedLessThanSingleton
-                    print(3)
                     yield tokens.PCData(literal='?')
             elif ch == '!':
                 ch = buf.next()

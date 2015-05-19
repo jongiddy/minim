@@ -183,11 +183,7 @@ class SentinelParserTests(unittest.TestCase):
         parse_sentinel(buf, tokens.Content, '?>')
         parse_sentinel = iter(parse_sentinel)
         with self.assertRaises(StopIteration):
-            x = next(parse_sentinel)
-            print(x)
-            if not x.is_token:
-                x = parse_sentinel.send(x)
-            print(x.literal)
+            next(parse_sentinel)
         self.assertEqual(buf.extract(), '')
         self.assertEqual(buf.get(), '')
 
@@ -373,7 +369,6 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             self.assertEqual(token_type, expected[0])
             self.assertEqual(token.literal, expected[1])
 
-    @unittest.skip('should pass when content is handled')
     def test_parse_invalid_processing_instruction(self):
         xml = '<??>'
         buf = iterseq.IterableAsSequence([xml])
@@ -390,8 +385,24 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
                 token = token_types.send(token_type)
             if token_type.is_content:
                 s += token.content
-            self.assertIs(not_well_formed, True)
-            self.assertEqual(s, xml)
+        self.assertIs(not_well_formed, True)
+        self.assertEqual(s, xml)
+
+    def test_parse_markupish_content(self):
+        xml = "?>"
+        expected_tokens = [
+            (tokens.PCData, '?>')
+            ]
+        buf = iterseq.IterableAsSequence([xml])
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse()
+        for token_type, expected in zip(token_types, expected_tokens):
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            self.assertEqual(token_type, expected[0])
+            self.assertEqual(token.literal, expected[1])
 
     def test_parse_content_only(self):
         xml = "no markup"
