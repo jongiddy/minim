@@ -49,11 +49,11 @@ class SentinelParser:
             self.is_initial = False
         loc = self.buf.match_to_sentinel(self.sentinel)
         if loc < 0:
-            # sentinel found, but need to handle content first
+            # sentinel or EOF found, but need to handle content first
             self.is_final = True
             self.needs_final = False
         elif loc == 0:
-            # sentinel found at start of string
+            # sentinel or EOF found at start of string
             self.stopped = self.stop_iteration
             if self.needs_final:
                 self.is_final = True
@@ -179,8 +179,8 @@ class WhitespaceParserXML10(PatternParser):
 
 class NameParser(PatternParser):
 
-    disallowed = ''' \t\r\n!"#$%&'()*+,/;<=>?@[\\]^`{|}~'''
-    initial_disallowed = '-.0-9' + disallowed
+    disallowed = r''']\s!"#$%&'()*+,/;<=>?@[\\^`{|}~'''  # ] must be first
+    initial_disallowed = disallowed + r'.\d-'            # - must be last
     initial = re.compile('[^{}][^{}]*'.format(initial_disallowed, disallowed))
     pattern = re.compile('[^{}]+'.format(disallowed))
 
@@ -218,120 +218,127 @@ class TokenGenerator:
             yield tokens.BadlyFormedEndOfStreamSingleton
 
     def parse_markup(self, buf):
-        assert buf.get() == '<'
-        ch = buf.next()
-        if ch == '/':
+        # MarkupWhitespace before initial non-ws is not considered to be content
+        yield from self.parse_whitespace(buf, tokens.MarkupWhitespace)
+        yield from self.parse_to_sentinel(buf, tokens.PCData, '<')
+        while buf.get() == '<':
             ch = buf.next()
-            if self.parse_name.matches_name(ch):
-                yield tokens.EndTagOpenSingleton
-                yield from self.parse_name(buf, tokens.TagName)
-                yield from self.parse_whitespace(buf, tokens.Whitespace)
-                ch = buf.get()
-                if ch != '>':
-                    raise RuntimeError('extra data in close tag')
-                yield tokens.EndTagCloseSingleton
-                buf.advance()
-            else:
-                yield tokens.BadlyFormedLessThanSingleton
-                yield tokens.PCData(literal='/')
-        elif ch == '?':
-            ch = buf.next()
-            if self.parse_name.matches_name(ch):
-                yield tokens.ProcessingInstructionOpenSingleton
-                yield from self.parse_name(
-                    buf, tokens.ProcessingInstructionTarget)
-                ws_after_name = yield from self.parse_whitespace(
-                    buf, tokens.Whitespace)
-                if not buf.starts_with('?>'):
-                    if not ws_after_name:
-                        raise RuntimeError('Expected ?>')
-                    yield from self.parse_to_sentinel(
-                        buf, tokens.ProcessingInstructionData, '?>')
-                    buf.advance(len('?>'))
-                    assert buf.extract() == '?>', repr(buf.extract())
-                yield tokens.ProcessingInstructionCloseSingleton
-            else:
-                yield tokens.BadlyFormedLessThanSingleton
-                yield tokens.PCData(literal='?')
-        elif ch == '!':
-            ch = buf.next()
-            if ch == '-':
+            if ch == '/':
+                ch = buf.next()
+                if self.parse_name.matches_name(ch):
+                    yield tokens.EndTagOpenSingleton
+                    yield from self.parse_name(buf, tokens.TagName)
+                    yield from self.parse_whitespace(buf, tokens.MarkupWhitespace)
+                    ch = buf.get()
+                    if ch != '>':
+                        raise RuntimeError('extra data in close tag')
+                    yield tokens.EndTagCloseSingleton
+                    buf.advance()
+                else:
+                    yield tokens.BadlyFormedLessThanSingleton
+                    yield tokens.PCData(literal='/')
+            elif ch == '?':
+                ch = buf.next()
+                if self.parse_name.matches_name(ch):
+                    yield tokens.ProcessingInstructionOpenSingleton
+                    yield from self.parse_name(
+                        buf, tokens.ProcessingInstructionTarget)
+                    ws_after_name = yield from self.parse_whitespace(
+                        buf, tokens.MarkupWhitespace)
+                    if not buf.starts_with('?>'):
+                        if not ws_after_name:
+                            raise RuntimeError('Expected ?>')
+                        yield from self.parse_to_sentinel(
+                            buf, tokens.ProcessingInstructionData, '?>')
+                        if not buf.starts_with('?>'):
+                            raise EOFError()
+                    yield tokens.ProcessingInstructionCloseSingleton
+                else:
+                    yield tokens.BadlyFormedLessThanSingleton
+                    print(3)
+                    yield tokens.PCData(literal='?')
+            elif ch == '!':
                 ch = buf.next()
                 if ch == '-':
-                    yield tokens.CommentOpenSingleton
-                    buf.advance()
-                    yield from self.parse_to_sentinel(
-                        buf, tokens.CommentData, '-->')
-                    buf.advance(len('-->'))
-                    assert buf.extract() == '-->'
-                    yield tokens.CommentCloseSingleton
+                    ch = buf.next()
+                    if ch == '-':
+                        yield tokens.CommentOpenSingleton
+                        buf.advance()
+                        yield from self.parse_to_sentinel(
+                            buf, tokens.CommentData, '-->')
+                        if not buf.starts_with('-->'):
+                            raise EOFError()
+                        yield tokens.CommentCloseSingleton
+                    else:
+                        # < does not appear to be well-formed markup - emit a
+                        # literal <
+                        yield tokens.BadlyFormedLessThanSingleton
+                        yield tokens.PCData(literal='!-')
+                elif ch == '[':
+                    if buf.starts_with('CDATA['):
+                        yield tokens.CDataOpenSingleton
+                        yield from self.parse_to_sentinel(buf, tokens.CData, ']]>')
+                        if not buf.starts_with(']]>'):
+                            raise EOFError()
+                        yield tokens.CDataCloseSingleton
+                    else:
+                        # declaration
+                        ...
                 else:
-                    # < does not appear to be well-formed markup - emit a
-                    # literal <
+                    # < does not appear to be well-formed markup - emit a literal <
                     yield tokens.BadlyFormedLessThanSingleton
-                    yield tokens.PCData(literal='!-')
-            elif ch == '[':
-                if buf.starts_with('CDATA['):
-                    yield tokens.CDataOpenSingleton
-                    yield from self.parse_to_sentinel(buf, tokens.CData, ']]>')
-                    buf.advance(len(']]>'))
-                    assert buf.extract() == ']]>'
-                    yield tokens.CDataCloseSingleton
+                    yield tokens.PCData(literal='!')
+            elif self.parse_name.matches_name(ch):
+                yield tokens.StartOrEmptyTagOpenSingleton
+                if not (yield from self.parse_name(buf, tokens.TagName)):
+                    raise RuntimeError('Expected tag name')
+                ws_found = yield from self.parse_whitespace(buf, tokens.MarkupWhitespace)
+                ch = buf.get()
+                while ch not in ('>', '/'):
+                    if not ws_found:
+                        raise RuntimeError(
+                            'Expected whitespace, >, or />, found %r' % ch)
+                    if not (yield from self.parse_name(buf, tokens.AttributeName)):
+                        raise RuntimeError('Expected attribute name')
+                    yield from self.parse_whitespace(buf, tokens.MarkupWhitespace)
+                    ch = buf.get()
+                    if ch == '=':
+                        yield tokens.AttributeEqualsSingleton
+                        buf.advance()
+                        yield from self.parse_whitespace(buf, tokens.MarkupWhitespace)
+                        ch = buf.get()
+                        if ch in ('"', "'"):
+                            if ch == '"':
+                                yield tokens.AttributeValueDoubleOpenSingleton
+                            else:
+                                yield tokens.AttributeValueSingleOpenSingleton
+                            buf.advance()
+                            yield from self.parse_to_sentinel(
+                                buf, tokens.AttributeValue, ch)
+                            if not buf.starts_with(ch):
+                                raise EOFError()
+                            if ch == '"':
+                                yield tokens.AttributeValueDoubleCloseSingleton
+                            else:
+                                yield tokens.AttributeValueSingleCloseSingleton
+                        else:
+                            # HTML fallback - need a parser to read un-quoted
+                            # attribute
+                            raise RuntimeError()
+                        ws_found = yield from self.parse_whitespace(
+                            buf, tokens.MarkupWhitespace)
+                        ch = buf.get()
+                if ch == '>':
+                    yield tokens.StartTagCloseSingleton
                 else:
-                    # declaration
-                    ...
+                    assert ch == '/'
+                    ch = buf.next()
+                    if ch != '>':
+                        raise RuntimeError('Expected />')
+                    yield tokens.EmptyTagCloseSingleton
+                buf.advance()
             else:
                 # < does not appear to be well-formed markup - emit a literal <
                 yield tokens.BadlyFormedLessThanSingleton
-                yield tokens.PCData(literal='!')
-        elif self.parse_name.matches_name(ch):
-            yield tokens.StartOrEmptyTagOpenSingleton
-            if not (yield from self.parse_name(buf, tokens.TagName)):
-                raise RuntimeError('Expected tag name')
-            ws_found = yield from self.parse_whitespace(buf, tokens.Whitespace)
-            ch = buf.get()
-            while ch not in ('>', '/'):
-                if not ws_found:
-                    raise RuntimeError(
-                        'Expected whitespace, >, or />, found %r' % ch)
-                if not (yield from self.parse_name(buf, tokens.AttributeName)):
-                    raise RuntimeError('Expected attribute name')
-                yield from self.parse_whitespace(buf, tokens.Whitespace)
-                ch = buf.get()
-                if ch == '=':
-                    yield tokens.AttributeEqualsSingleton
-                    buf.advance()
-                    yield from self.parse_whitespace(buf, tokens.Whitespace)
-                    ch = buf.get()
-                    if ch in ('"', "'"):
-                        if ch == '"':
-                            yield tokens.AttributeValueDoubleOpenSingleton
-                        else:
-                            yield tokens.AttributeValueSingleOpenSingleton
-                        buf.advance()
-                        yield from self.parse_to_sentinel(
-                            buf, tokens.AttributeValue, ch)
-                        if ch == '"':
-                            yield tokens.AttributeValueDoubleCloseSingleton
-                        else:
-                            yield tokens.AttributeValueSingleCloseSingleton
-                        buf.advance()
-                    else:
-                        # HTML fallback - need a parser to read un-quoted
-                        # attribute
-                        raise RuntimeError()
-                    ws_found = yield from self.parse_whitespace(
-                        buf, tokens.Whitespace)
-                    ch = buf.get()
-            if ch == '>':
-                yield tokens.StartTagCloseSingleton
-            else:
-                assert ch == '/'
-                ch = buf.next()
-                if ch != '>':
-                    raise RuntimeError('Expected />')
-                yield tokens.EmptyTagCloseSingleton
-            buf.advance()
-        else:
-            # < does not appear to be well-formed markup - emit a literal <
-            yield tokens.BadlyFormedLessThanSingleton
+            yield from self.parse_whitespace(buf, tokens.WhitespaceContent)
+            yield from self.parse_to_sentinel(buf, tokens.PCData, '<')

@@ -77,10 +77,10 @@ class WhitespaceParserTests(unittest.TestCase):
         s = ' ' * 3 + 'foo'
         buf = iterseq.IterableAsSequence([s])
         parse_whitespace = lex.WhitespaceParserXML10()
-        parse_whitespace(buf, tokens.Whitespace)
+        parse_whitespace(buf, tokens.MarkupWhitespace)
         parse_whitespace = iter(parse_whitespace)
-        self.assertIs(next(parse_whitespace), tokens.Whitespace)
-        token = parse_whitespace.send(tokens.Whitespace)
+        self.assertIs(next(parse_whitespace), tokens.MarkupWhitespace)
+        token = parse_whitespace.send(tokens.MarkupWhitespace)
         self.assertEqual(token.literal, ' ' * 3)
         with self.assertRaises(StopIteration) as stop:
             next(parse_whitespace)
@@ -91,15 +91,15 @@ class WhitespaceParserTests(unittest.TestCase):
         s = ' ' * 3
         buf = iterseq.IterableAsSequence([s])
         parse_whitespace = lex.WhitespaceParserXML10()
-        parse_whitespace(buf, tokens.Whitespace)
+        parse_whitespace(buf, tokens.MarkupWhitespace)
         parse_whitespace = iter(parse_whitespace)
-        self.assertIs(next(parse_whitespace), tokens.Whitespace)
-        token = parse_whitespace.send(tokens.Whitespace)
+        self.assertIs(next(parse_whitespace), tokens.MarkupWhitespace)
+        token = parse_whitespace.send(tokens.MarkupWhitespace)
         self.assertEqual(token.literal, ' ' * 3)
         self.assertIs(token.is_initial, True)
         self.assertIs(token.is_final, False)
-        self.assertIs(next(parse_whitespace), tokens.Whitespace)
-        token = parse_whitespace.send(tokens.Whitespace)
+        self.assertIs(next(parse_whitespace), tokens.MarkupWhitespace)
+        token = parse_whitespace.send(tokens.MarkupWhitespace)
         self.assertEqual(token.literal, '')
         self.assertIs(token.is_initial, False)
         self.assertIs(token.is_final, True)
@@ -112,7 +112,7 @@ class WhitespaceParserTests(unittest.TestCase):
         s = 'foo'
         buf = iterseq.IterableAsSequence([s])
         parse_whitespace = lex.WhitespaceParserXML10()
-        parse_whitespace(buf, tokens.Whitespace)
+        parse_whitespace(buf, tokens.MarkupWhitespace)
         parse_whitespace = iter(parse_whitespace)
         with self.assertRaises(StopIteration) as stop:
             next(parse_whitespace)
@@ -154,8 +154,12 @@ class SentinelParserTests(unittest.TestCase):
         parse_sentinel = lex.SentinelParser()
         parse_sentinel(buf, tokens.Content, '?>')
         parse_sentinel = iter(parse_sentinel)
-        with self.assertRaises(EOFError):
-            next(parse_sentinel)
+        with self.assertRaises(StopIteration):
+            x = next(parse_sentinel)
+            print(x)
+            if not x.is_token:
+                x = parse_sentinel.send(x)
+            print(x.literal)
         self.assertEqual(buf.extract(), '')
         self.assertEqual(buf.get(), '')
 
@@ -168,7 +172,11 @@ class SentinelParserTests(unittest.TestCase):
         self.assertIs(next(parse_sentinel), tokens.Content)
         token = parse_sentinel.send(tokens.Content)
         self.assertEqual(token.literal, 'morefix')
-        with self.assertRaises(EOFError):
+        self.assertIs(next(parse_sentinel), tokens.Content)
+        token = parse_sentinel.send(tokens.Content)
+        self.assertEqual(token.literal, '')
+        self.assertIs(token.is_final, True)
+        with self.assertRaises(StopIteration):
             next(parse_sentinel)
         self.assertEqual(buf.extract(), '')
         self.assertEqual(buf.get(), '')
@@ -181,7 +189,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         expected_tokens = [
             (tokens.StartOrEmptyTagOpenSingleton, '<'),
             (tokens.TagName, 'tag'),
-            (tokens.Whitespace, ' '),
+            (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'foo'),
             (tokens.AttributeEqualsSingleton, '='),
             (tokens.AttributeValueDoubleOpenSingleton, '"'),
@@ -223,13 +231,13 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         expected_tokens = [
             (tokens.StartOrEmptyTagOpenSingleton, '<'),
             (tokens.TagName, 'tag'),
-            (tokens.Whitespace, '\t'),
+            (tokens.MarkupWhitespace, '\t'),
             (tokens.AttributeName, 'foo'),
             (tokens.AttributeEqualsSingleton, '='),
             (tokens.AttributeValueDoubleOpenSingleton, '"'),
             (tokens.AttributeValue, 'bar'),
             (tokens.AttributeValueDoubleCloseSingleton, '"'),
-            (tokens.Whitespace, '\n\t'),
+            (tokens.MarkupWhitespace, '\n\t'),
             (tokens.EmptyTagCloseSingleton, '/>')
             ]
         buf = iterseq.IterableAsSequence([xml])
@@ -304,7 +312,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         expected_tokens = [
             (tokens.ProcessingInstructionOpenSingleton, '<?'),
             (tokens.ProcessingInstructionTarget, 'xml'),
-            (tokens.Whitespace, ' '),
+            (tokens.MarkupWhitespace, ' '),
             (tokens.ProcessingInstructionData, 'foo bar'),
             (tokens.ProcessingInstructionCloseSingleton, '?>')
             ]
@@ -356,3 +364,57 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
                 s += token.content
             self.assertIs(not_well_formed, True)
             self.assertEqual(s, xml)
+
+    def test_parse_content_only(self):
+        xml = "no markup"
+        expected_tokens = [
+            (tokens.PCData, 'no markup'),
+            ]
+        buf = iterseq.IterableAsSequence([xml])
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse()
+        for token_type, expected in zip(token_types, expected_tokens):
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            self.assertEqual(token_type, expected[0])
+            self.assertEqual(token.literal, expected[1])
+
+    def test_parse_content_markup(self):
+        xml = "some content<tag>"
+        expected_tokens = [
+            (tokens.PCData, 'some content'),
+            (tokens.StartOrEmptyTagOpenSingleton, '<'),
+            (tokens.TagName, 'tag'),
+            (tokens.StartTagCloseSingleton, '>')
+            ]
+        buf = iterseq.IterableAsSequence([xml])
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse()
+        for token_type, expected in zip(token_types, expected_tokens):
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            self.assertEqual(token_type, expected[0])
+            self.assertEqual(token.literal, expected[1])
+
+    def test_parse_markup_content(self):
+        xml = "<tag>some content"
+        expected_tokens = [
+            (tokens.StartOrEmptyTagOpenSingleton, '<'),
+            (tokens.TagName, 'tag'),
+            (tokens.StartTagCloseSingleton, '>'),
+            (tokens.PCData, 'some content'),
+            ]
+        buf = iterseq.IterableAsSequence([xml])
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse()
+        for token_type, expected in zip(token_types, expected_tokens):
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            self.assertEqual(token_type, expected[0])
+            self.assertEqual(token.literal, expected[1])

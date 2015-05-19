@@ -115,7 +115,7 @@ class SingletonMarkup(Markup):
         return cls.literal.encode(encoding)
 
 
-class Whitespace(Markup):
+class MarkupWhitespace(Markup):
     is_structure = True
 
 
@@ -219,9 +219,9 @@ class CDataCloseSingleton(SingletonMarkup):
     literal = ']]>'
 
 
-class LeadingWhitespace(Content):
+class WhitespaceContent(Content):
 
-    """Whitespace that occurs after markup and before any non-space content.
+    """MarkupWhitespace that occurs after markup and before any non-space content.
 
     Separating this into a separate token allows higher-level parsers to
     quickly identify all-whitespace gaps between markup without having

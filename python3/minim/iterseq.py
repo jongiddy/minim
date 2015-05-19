@@ -107,22 +107,18 @@ class IterableAsSequence:
 
         :return:
             +n there is content of length n, and subsequent call may match more
-            -n there is content of length n, followed by sentinel
-            0 there is no content, sentinel only
+            -n there is content of length n, followed by sentinel or EOS
+            0 there is no content, sentinel or EOF only
             ``extract`` will return the content before the sentinel.
-        :raise: ``EOFError`` if no content and no sentinel before EOF
         """
         start = self.ensure(len(sentinel))
         buf = self._buf
         if start < 0:
             # EOF and remaining characters < sentinel length
             # -> sentinel can never appear
-            if len(buf) == 0:
-                raise EOFError()
-            else:
-                self._start = start
-                self._current = len(buf)
-                return len(buf) - start
+            self._start = self._current
+            self._current = len(buf)
+            return self._start - self._current
         self._start = start
         loc = buf.find(sentinel, start)
         if loc < 0:

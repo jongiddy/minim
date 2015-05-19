@@ -113,8 +113,9 @@ class IterableAsSequenceTest(unittest.TestCase):
         length = self.buf.match_to_sentinel('XXX')
         self.assertGreater(length, 0)
         self.assertEqual(self.buf.extract(), self.s[1])
-        with self.assertRaises(EOFError):
-            self.buf.match_to_sentinel('XXX')
+        length = self.buf.match_to_sentinel('XXX')
+        self.assertEqual(length, 0)
+        self.assertEqual(self.buf.extract(), '')
         self.assertEqual(self.buf.get(), '')
 
     def test_starts_with(self):
