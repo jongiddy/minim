@@ -297,7 +297,7 @@ class TokenGenerator:
                 ws_found = yield from self.parse_space(
                     buf, tokens.MarkupWhitespace)
                 ch = buf.get()
-                while ch not in ('>', '/'):
+                while ch not in ('', '>', '/'):
                     if not ws_found:
                         raise RuntimeError(
                             'Expected whitespace, >, or />, found %r' % ch)
@@ -334,7 +334,9 @@ class TokenGenerator:
                         ws_found = yield from self.parse_space(
                             buf, tokens.MarkupWhitespace)
                         ch = buf.get()
-                if ch == '>':
+                if not ch:
+                    raise EOFError()
+                elif ch == '>':
                     yield tokens.StartTagCloseToken
                 else:
                     assert ch == '/'

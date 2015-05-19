@@ -223,7 +223,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             ]
         buf = iterseq.IterableAsSequence([xml])
         scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse_markup(buf)
+        token_types = scanner.parse()
         for token_type, expected in zip(token_types, expected_tokens):
             if token_type.is_token:
                 token = token_type
@@ -231,6 +231,50 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
                 token = token_types.send(token_type)
             self.assertEqual(token_type, expected[0])
             self.assertEqual(token.literal, expected[1])
+        self.assertEqual(buf.get(), '')
+
+    def test_parse_short_open_tag(self):
+        xml = '<tag'
+        expected_tokens = [
+            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.TagName, 'tag'),
+            (tokens.TagName, ''),
+            (tokens.BadlyFormedEndOfStreamToken, '')
+            ]
+        buf = iterseq.IterableAsSequence([xml])
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse()
+        for token_type, expected in zip(token_types, expected_tokens):
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            self.assertEqual(token_type, expected[0])
+            self.assertEqual(token.literal, expected[1])
+        self.assertEqual(buf.get(), '')
+
+    def test_parse_short_open_tag_space(self):
+        xml = '<tag '
+        expected_tokens = [
+            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.TagName, 'tag'),
+            (tokens.MarkupWhitespace, ' '),
+            (tokens.MarkupWhitespace, ''),
+            (tokens.BadlyFormedEndOfStreamToken, '')
+            ]
+        buf = iterseq.IterableAsSequence([xml])
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse()
+        for token_type, expected in zip(token_types, expected_tokens):
+            if token_type.is_token:
+                token = token_type
+            else:
+                token = token_types.send(token_type)
+            self.assertEqual(token_type, expected[0])
+            self.assertEqual(token.literal, expected[1])
+        self.assertEqual(buf.get(), '')
+
+    # TODO - test additional short versions of markup
 
     def test_parse_end_tag(self):
         xml = '</ns:tag>'
