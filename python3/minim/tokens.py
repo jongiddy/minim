@@ -156,11 +156,8 @@ class CommentData(Markup):
 
 class SingletonMarkup(Markup):
 
-    """A token that always has the same representation.
+    """A token that always has the same representation."""
 
-    In this case, the class can represent the token."""
-
-    is_token = True
     is_structure = True
 
     def set(self, **kw):

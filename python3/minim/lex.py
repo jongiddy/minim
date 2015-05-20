@@ -211,14 +211,7 @@ class TokenGenerator:
         self.parse_until = SentinelParser()
 
     def parse(self):
-        try:
-            yield from self.parse_markup(self.buf)
-        except EOFError:
-            # If an uncaught EOFError reaches here, emit a token to
-            # inform the caller that the EOF was unexpected.
-            yield tokens.BadlyFormedEndOfStream
-
-    def parse_markup(self, buf):
+        buf = self.buf
         # Whitespace before initial non-ws is not considered to be content
         yield from self.parse_space(buf, tokens.MarkupWhitespace)
         yield from self.parse_until(
@@ -232,7 +225,10 @@ class TokenGenerator:
                     yield from self.parse_name(buf, tokens.TagName)
                     yield from self.parse_space(buf, tokens.MarkupWhitespace)
                     ch = buf.get()
-                    if ch != '>':
+                    if not ch:
+                        yield tokens.BadlyFormedEndOfStream()
+                        return
+                    elif ch != '>':
                         raise RuntimeError('extra data in close tag')
                     yield tokens.EndTagCloseToken
                     buf.advance()
@@ -248,13 +244,29 @@ class TokenGenerator:
                     ws_after_name = yield from self.parse_space(
                         buf, tokens.MarkupWhitespace)
                     if not buf.starts_with('?>'):
+                        ch = buf.get()
+                        if not ch:
+                            yield tokens.BadlyFormedEndOfStream()
+                            return
+                        if ch == '?':
+                            ch = buf.next()
+                            if not ch:
+                                yield tokens.BadlyFormedEndOfStream('?')
+                                return
+                            else:
+                                raise RuntimeError('Expected ?>')
+                        if not buf.get():
+                            yield tokens.BadlyFormedEndOfStream()
+                            return
                         if not ws_after_name:
                             raise RuntimeError('Expected ?>')
                         yield from self.parse_until(
-
                             buf, tokens.ProcessingInstructionData, '?>')
                         if not buf.starts_with('?>'):
-                            yield tokens.BadlyFormedEndOfStream()
+                            ch = buf.get()  # '?' or ''
+                            assert not buf.next(), repr(buf.get())
+                            yield tokens.BadlyFormedEndOfStream(ch)
+                            return
                     yield tokens.ProcessingInstructionCloseToken
                 else:
                     yield tokens.BadlyFormedLessThanToken
@@ -269,7 +281,8 @@ class TokenGenerator:
                         yield from self.parse_until(
                             buf, tokens.CommentData, '-->')
                         if not buf.starts_with('-->'):
-                            raise EOFError()
+                            yield tokens.BadlyFormedEndOfStream()
+                            return
                         yield tokens.CommentCloseToken
                     else:
                         # < does not appear to be well-formed markup - emit a
@@ -312,6 +325,9 @@ class TokenGenerator:
                         yield from self.parse_space(
                             buf, tokens.MarkupWhitespace)
                         ch = buf.get()
+                        if not ch:
+                            yield tokens.BadlyFormedEndOfStream()
+                            return
                         if ch in ('"', "'"):
                             if ch == '"':
                                 yield tokens.AttributeValueDoubleOpenToken
@@ -319,10 +335,10 @@ class TokenGenerator:
                                 yield tokens.AttributeValueSingleOpenToken
                             buf.advance()
                             yield from self.parse_until(
-
                                 buf, tokens.AttributeValue, ch)
                             if not buf.starts_with(ch):
-                                raise EOFError()
+                                yield tokens.BadlyFormedEndOfStream()
+                                return
                             if ch == '"':
                                 yield tokens.AttributeValueDoubleCloseToken
                             else:
@@ -336,6 +352,7 @@ class TokenGenerator:
                         ch = buf.get()
                 if not ch:
                     yield tokens.BadlyFormedEndOfStream()
+                    return
                 elif ch == '>':
                     yield tokens.StartTagCloseToken
                     buf.advance()
@@ -344,6 +361,7 @@ class TokenGenerator:
                     ch = buf.next()
                     if not ch:
                         yield tokens.BadlyFormedEndOfStream('/')
+                        return
                     elif ch != '>':
                         raise RuntimeError('Expected />')
                     yield tokens.EmptyTagCloseToken
@@ -353,5 +371,4 @@ class TokenGenerator:
                 # as a content character
                 yield tokens.BadlyFormedLessThanToken
             yield from self.parse_space(buf, tokens.WhitespaceContent)
-            yield from self.parse_until(
-                buf, tokens.PCData, '<')
+            yield from self.parse_until(buf, tokens.PCData, '<')
