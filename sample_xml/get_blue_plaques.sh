@@ -13,7 +13,7 @@
 # back to us - however you are under no obligation to do so.
 
 # Type: XML 1.0
-# Encoding: UTF-8
+# Encoding: UTF-8 (contains multi-byte characters)
 # Size: 19M
 
 set -e
