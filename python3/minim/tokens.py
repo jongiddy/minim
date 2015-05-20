@@ -271,10 +271,19 @@ class BadlyFormedLessThanToken(SingletonContent):
     content = '<'
 
 
-class SingletonControl(Token):
+class Control(Token):
+    """Tokens that are not markup and not content.
+
+    Includes Byte Order Markers and unexpected character sequences that
+    cannot be glossed over.
+    """
+
+    is_control = True
+
+
+class SingletonControl(Control):
 
     is_token = True
-    is_control = True
 
     def __init__(self, *args):
         raise NotImplementedError('cannot instantiate SingletonControl class')
