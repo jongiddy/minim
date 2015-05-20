@@ -277,7 +277,7 @@ class SingletonControl(Token):
     is_control = True
 
     def __init__(self, *args):
-        raise NotImplementedError('cannot instantiate SingletonMarkup class')
+        raise NotImplementedError('cannot instantiate SingletonControl class')
 
     def set(self, **kw):
         raise ImmutableTokenException('Immutable token cannot be modified')
@@ -295,7 +295,7 @@ class SingletonControl(Token):
         return cls.literal.encode(encoding)
 
 
-class BadlyFormedEndOfStreamToken(SingletonMarkup):
+class BadlyFormedEndOfStreamToken(SingletonControl):
     is_well_formed = False
     literal = ''
     content = ''
