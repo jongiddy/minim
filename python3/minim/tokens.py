@@ -1,4 +1,9 @@
 
+class ImmutableTokenException(Exception):
+
+    pass
+
+
 class Singleton:
     pass
 
@@ -11,7 +16,6 @@ class Token:
     is_token = False       # Is this a token_type (class) or a token (instance)
     is_content = False     # Is this content
     is_markup = False      # or is it markup
-    is_control = False     # small number of non-markup, non-content tokens
     # If markup is not valid, we treat it as content, but set
     # is_well_formed to False
     is_well_formed = True  # Is this content well-formed
@@ -25,7 +29,7 @@ class Token:
     is_final = True        # Is this a final section?
 
     def __init__(
-            self, literal=None, encoding=None, is_initial=True, is_final=True):
+            self, literal='', encoding=None, is_initial=True, is_final=True):
         self.is_token = True
         self._literal = literal
         self._encoding = encoding
@@ -61,7 +65,7 @@ class Content(Token):
 
     is_content = True
 
-    def __init__(self, literal=None, encoding=None, content=Undefined, **kw):
+    def __init__(self, literal='', encoding=None, content=Undefined, **kw):
         super().__init__(literal, encoding, **kw)
         self._content = content
 
@@ -77,146 +81,12 @@ class Content(Token):
         return content
 
 
-class Markup(Token):
-
-    is_markup = True
-
-
-class ImmutableTokenException(Exception):
-
-    pass
-
-
-class SingletonMarkup(Markup):
-
-    """A token that always has the same representation.
-
-    In this case, the class can represent the token."""
-
-    is_token = True
-    is_structure = True
-
-    def __init__(self, *args):
-        raise NotImplementedError('cannot instantiate SingletonMarkup class')
-
-    def set(self, **kw):
-        raise ImmutableTokenException('Immutable token cannot be modified')
-
-    @classmethod
-    def emit(cls):
-        yield cls
-
-    @classmethod
-    def literal_bytes(cls, encoding):
-        """Return the literal bytes from the source.
-
-        :param string encoding: Character encoding for returned literal.
-        """
-        return cls.literal.encode(encoding)
-
-
-class MarkupWhitespace(Markup):
-    is_structure = True
-
-
-class StartOrEmptyTagOpenToken(SingletonMarkup):
-    literal = '<'
-
-
-class EndTagOpenToken(SingletonMarkup):
-    literal = '</'
-
-
-class TagName(Markup):
-    is_name = True
-
-
-class AttributeName(Markup):
-    is_name = True
-
-
-class AttributeEqualsToken(SingletonMarkup):
-    literal = '='
-
-
-class AttributeValueOpen(SingletonMarkup):
-    pass
-
-
-class AttributeValueDoubleOpenToken(AttributeValueOpen):
-    literal = '"'
-
-
-class AttributeValueSingleOpenToken(AttributeValueOpen):
-    literal = "'"
-
-
-class AttributeValue(Markup):
-    is_data = True
-
-
-class AttributeValueClose(SingletonMarkup):
-    pass
-
-
-class AttributeValueDoubleCloseToken(AttributeValueClose):
-    literal = '"'
-
-
-class AttributeValueSingleCloseToken(AttributeValueClose):
-    literal = "'"
-
-
-class StartTagCloseToken(SingletonMarkup):
-    literal = '>'
-
-
-class EmptyTagCloseToken(SingletonMarkup):
-    literal = '/>'
-
-
-class EndTagCloseToken(SingletonMarkup):
-    literal = '>'
-
-
-class ProcessingInstructionOpenToken(SingletonMarkup):
-    literal = '<?'
-
-
-class ProcessingInstructionTarget(Markup):
-    is_name = True
-
-
-class ProcessingInstructionData(Markup):
-    is_data = True
-
-
-class ProcessingInstructionCloseToken(SingletonMarkup):
-    literal = '?>'
-
-
-class CommentOpenToken(SingletonMarkup):
-    literal = '<!--'
-
-
-class CommentData(Markup):
-    is_data = True
-
-
-class CommentCloseToken(SingletonMarkup):
-    literal = '-->'
-
-
-class CDataOpenToken(SingletonMarkup):
-    literal = '<[CDATA['
-
-
 class CData(Content):
     pass
 
 
-class CDataCloseToken(SingletonMarkup):
-    literal = ']]>'
+class PCData(Content):
+    pass
 
 
 class WhitespaceContent(Content):
@@ -229,82 +99,102 @@ class WhitespaceContent(Content):
     """
 
 
-class PCData(Content):
-    pass
-
-
-class SingletonContent(PCData):
+class BadlyFormedContent(Content):
 
     """A token that always has the same representation.
 
     In this case, the class can represent the token.
 
-    SingletonContent is used to recover from invalid markup, which is
-    interpreted as badly-formatted content.  For example, any '<' which
-    doesn't subsequently scan as valid markup is emitted as a literal
-    '<' embedded in the content (which should have been escaped)."""
-
-    is_token = True
-
-    def __init__(self, *args):
-        raise NotImplementedError('cannot instantiate SingletonMarkup class')
-
-    def set(self, **kw):
-        raise ImmutableTokenException('Immutable token cannot be modified')
-
-    @classmethod
-    def emit(cls):
-        yield cls
-
-    @classmethod
-    def literal_bytes(cls, encoding):
-        """Return the literal bytes from the source.
-
-        :param string encoding: Character encoding for returned literal.
-        """
-        return cls.literal.encode(encoding)
-
-
-class BadlyFormedLessThanToken(SingletonContent):
-    is_well_formed = False
-    literal = '<'
-    content = '<'
-
-
-class Control(Token):
-    """Tokens that are not markup and not content.
-
-    Includes Byte Order Markers and unexpected character sequences that
-    cannot be glossed over.
+    BadlyFormedContent is used to recover from invalid markup, which can
+    be interpreted as badly-formatted content.  For example, any '<'
+    which doesn't subsequently scan as valid markup is emitted as a
+    literal '<' embedded in the content.
     """
 
-    is_control = True
-
-
-class SingletonControl(Control):
-
-    is_token = True
-
-    def __init__(self, *args):
-        raise NotImplementedError('cannot instantiate SingletonControl class')
+    is_well_formed = False
 
     def set(self, **kw):
         raise ImmutableTokenException('Immutable token cannot be modified')
 
-    @classmethod
-    def emit(cls):
-        yield cls
 
-    @classmethod
-    def literal_bytes(cls, encoding):
-        """Return the literal bytes from the source.
-
-        :param string encoding: Character encoding for returned literal.
-        """
-        return cls.literal.encode(encoding)
+BadlyFormedAmpersandToken = BadlyFormedContent(literal='&', content='&')
+BadlyFormedLessThanToken = BadlyFormedContent(literal='<', content='<')
 
 
-class BadlyFormedEndOfStreamToken(SingletonControl):
+class Markup(Token):
+
+    is_markup = True
+
+
+class MarkupWhitespace(Markup):
+    is_structure = True
+
+
+class TagName(Markup):
+    is_name = True
+
+
+class AttributeName(Markup):
+    is_name = True
+
+
+class AttributeValue(Markup):
+    is_data = True
+
+
+class ProcessingInstructionTarget(Markup):
+    is_name = True
+
+
+class ProcessingInstructionData(Markup):
+    is_data = True
+
+
+class CommentData(Markup):
+    is_data = True
+
+
+class SingletonMarkup(Markup):
+
+    """A token that always has the same representation.
+
+    In this case, the class can represent the token."""
+
+    is_token = True
+    is_structure = True
+
+    def set(self, **kw):
+        raise ImmutableTokenException('Immutable token cannot be modified')
+
+
+StartOrEmptyTagOpenToken = SingletonMarkup(literal='<')
+EndTagOpenToken = SingletonMarkup(literal='</')
+AttributeEqualsToken = SingletonMarkup(literal='=')
+
+
+class AttributeValueOpen(SingletonMarkup):
+    pass
+AttributeValueDoubleOpenToken = AttributeValueOpen(literal='"')
+AttributeValueSingleOpenToken = AttributeValueOpen(literal="'")
+
+
+class AttributeValueClose(SingletonMarkup):
+    pass
+AttributeValueDoubleCloseToken = AttributeValueClose(literal='"')
+AttributeValueSingleCloseToken = AttributeValueClose(literal="'")
+
+StartTagCloseToken = SingletonMarkup(literal='>')
+EmptyTagCloseToken = SingletonMarkup(literal='/>')
+EndTagCloseToken = SingletonMarkup(literal='>')
+ProcessingInstructionOpenToken = SingletonMarkup(literal='<?')
+ProcessingInstructionCloseToken = SingletonMarkup(literal='?>')
+CommentOpenToken = SingletonMarkup(literal='<!--')
+CommentCloseToken = SingletonMarkup(literal='-->')
+CDataOpenToken = SingletonMarkup(literal='<[CDATA[')
+CDataCloseToken = SingletonMarkup(literal=']]>')
+
+
+class BadlyFormedEndOfStream(Markup):
+
+    """Class to represent markup that is not terminated properly."""
     is_well_formed = False
-    literal = ''
-    content = ''

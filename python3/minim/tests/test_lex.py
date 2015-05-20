@@ -208,6 +208,23 @@ class SentinelParserTests(unittest.TestCase):
 
 class TokenGeneratorMarkupTests(unittest.TestCase):
 
+    def scan(self, stream, expected_tokens):
+        buf = iterseq.IterableAsSequence(stream)
+        scanner = lex.TokenGenerator(buf)
+        token_types = scanner.parse()
+        for token_type, expected in zip(token_types, expected_tokens):
+            if token_type.is_token:
+                token = token_type
+                if expected[0].is_token:
+                    self.assertIs(token, expected[0])
+                else:
+                    self.assertIsInstance(token, expected[0])
+            else:
+                self.assertIs(token_type, expected[0])
+                token = token_types.send(token_type)
+            self.assertEqual(token.literal, expected[1])
+        self.assertEqual(buf.get(), '')
+
     def test_parse_open_tag(self):
         xml = '<tag foo="bar">'
         expected_tokens = [
@@ -221,17 +238,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.AttributeValueDoubleCloseToken, '"'),
             (tokens.StartTagCloseToken, '>')
             ]
-        buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
-        self.assertEqual(buf.get(), '')
+        self.scan([xml], expected_tokens)
 
     def test_parse_short_open_tag(self):
         xml = '<tag'
@@ -239,19 +246,9 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.StartOrEmptyTagOpenToken, '<'),
             (tokens.TagName, 'tag'),
             (tokens.TagName, ''),
-            (tokens.BadlyFormedEndOfStreamToken, '')
+            (tokens.BadlyFormedEndOfStream, '')
             ]
-        buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
-        self.assertEqual(buf.get(), '')
+        self.scan([xml], expected_tokens)
 
     def test_parse_short_open_tag_space(self):
         xml = '<tag '
@@ -260,21 +257,9 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.TagName, 'tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.MarkupWhitespace, ''),
-            (tokens.BadlyFormedEndOfStreamToken, '')
+            (tokens.BadlyFormedEndOfStream, '')
             ]
-        buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
-        self.assertEqual(buf.get(), '')
-
-    # TODO - test additional short versions of markup
+        self.scan([xml], expected_tokens)
 
     def test_parse_end_tag(self):
         xml = '</ns:tag>'
@@ -283,16 +268,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.TagName, 'ns:tag'),
             (tokens.EndTagCloseToken, '>')
             ]
-        buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse_markup(buf)
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
+        self.scan([xml], expected_tokens)
 
     def test_parse_empty_tag(self):
         xml = '<tag\tfoo="bar"\n\t/>'
@@ -308,16 +284,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.MarkupWhitespace, '\n\t'),
             (tokens.EmptyTagCloseToken, '/>')
             ]
-        buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse_markup(buf)
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
+        self.scan([xml], expected_tokens)
 
     def test_parse_comment(self):
         xml = "<!-- Lot's of text, including technically invalid -- -->"
@@ -327,16 +294,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
                 " Lot's of text, including technically invalid -- "),
             (tokens.CommentCloseToken, '-->')
             ]
-        buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
+        self.scan([xml], expected_tokens)
 
     def test_parse_empty_comment(self):
         xml = "<!---->"
@@ -344,16 +302,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.CommentOpenToken, '<!--'),
             (tokens.CommentCloseToken, '-->')
             ]
-        buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
+        self.scan([xml], expected_tokens)
 
     def test_parse_invalid_comment(self):
         # As non-well-formed markup, this is interpreted as content, but
@@ -384,16 +333,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.ProcessingInstructionData, 'foo bar'),
             (tokens.ProcessingInstructionCloseToken, '?>')
             ]
-        buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
+        self.scan([xml], expected_tokens)
 
     def test_parse_empty_processing_instruction(self):
         xml = "<?xml?>"
@@ -402,16 +342,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.ProcessingInstructionTarget, 'xml'),
             (tokens.ProcessingInstructionCloseToken, '?>')
             ]
-        buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
+        self.scan([xml], expected_tokens)
 
     def test_parse_invalid_processing_instruction(self):
         xml = '<??>'
@@ -437,32 +368,14 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         expected_tokens = [
             (tokens.PCData, '?>')
             ]
-        buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
+        self.scan([xml], expected_tokens)
 
     def test_parse_content_only(self):
         xml = "no markup"
         expected_tokens = [
             (tokens.PCData, 'no markup'),
             ]
-        buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
+        self.scan([xml], expected_tokens)
 
     def test_parse_content_markup(self):
         xml = "some content<tag>"
@@ -472,16 +385,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.TagName, 'tag'),
             (tokens.StartTagCloseToken, '>')
             ]
-        buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
+        self.scan([xml], expected_tokens)
 
     def test_parse_markup_content(self):
         xml = "<tag>some content"
@@ -491,16 +395,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.StartTagCloseToken, '>'),
             (tokens.PCData, 'some content'),
             ]
-        buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
+        self.scan([xml], expected_tokens)
 
     def test_literal_ok(self):
         xml = [

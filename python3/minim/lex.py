@@ -216,7 +216,7 @@ class TokenGenerator:
         except EOFError:
             # If an uncaught EOFError reaches here, emit a token to
             # inform the caller that the EOF was unexpected.
-            yield tokens.BadlyFormedEndOfStreamToken
+            yield tokens.BadlyFormedEndOfStream
 
     def parse_markup(self, buf):
         # Whitespace before initial non-ws is not considered to be content
@@ -254,7 +254,7 @@ class TokenGenerator:
 
                             buf, tokens.ProcessingInstructionData, '?>')
                         if not buf.starts_with('?>'):
-                            raise EOFError()
+                            yield tokens.BadlyFormedEndOfStream()
                     yield tokens.ProcessingInstructionCloseToken
                 else:
                     yield tokens.BadlyFormedLessThanToken
@@ -335,18 +335,22 @@ class TokenGenerator:
                             buf, tokens.MarkupWhitespace)
                         ch = buf.get()
                 if not ch:
-                    raise EOFError()
+                    yield tokens.BadlyFormedEndOfStream()
                 elif ch == '>':
                     yield tokens.StartTagCloseToken
+                    buf.advance()
                 else:
                     assert ch == '/'
                     ch = buf.next()
-                    if ch != '>':
+                    if not ch:
+                        yield tokens.BadlyFormedEndOfStream('/')
+                    elif ch != '>':
                         raise RuntimeError('Expected />')
                     yield tokens.EmptyTagCloseToken
-                buf.advance()
+                    buf.advance()
             else:
-                # < does not appear to be well-formed markup - emit a literal <
+                # < does not appear to be well-formed markup - treat it
+                # as a content character
                 yield tokens.BadlyFormedLessThanToken
             yield from self.parse_space(buf, tokens.WhitespaceContent)
             yield from self.parse_until(
