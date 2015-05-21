@@ -1,10 +1,10 @@
-from minim.tokens import Content
 from minim.lex import token_type_generator
 
 
 def TokenReader(string_iter):
-    for s in string_iter:
-        yield Content(s)
+    reader = Reader(string_iter)
+    for token_type in reader:
+        yield reader.get_token(token_type)
 
 
 class Reader:

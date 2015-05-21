@@ -14,25 +14,13 @@ the need to operate a state machine.
 """
 import re
 
-from minim import tokens
+from minim import iterseq, tokens
 
 
 def token_type_generator(string_iter):
-    for s in string_iter:
-        response = yield tokens.Content
-        if response is not None:
-            # response should either be a token_type (the Content class)
-            # or an existing Token.
-            if response.is_token:
-                # response is a token: set contents of this token and
-                # return
-                assert isinstance(response, tokens.Token)
-                response.set(literal=s)
-                yield response
-            else:
-                assert issubclass(response, tokens.Token)
-                # response is a token_type, instantiate it and set contents
-                yield response(s)
+    tg = TokenGenerator()
+    buf = iterseq.IterableAsSequence(string_iter)
+    yield from tg.parse(buf)
 
 
 class SentinelParser:
