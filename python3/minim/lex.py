@@ -1,3 +1,17 @@
+"""Lexical scanning of XML-like languages.
+
+This file contains several classes that implement the generator interface.
+These could be implemented as proper generators, but they get called
+frequently, and calling new generators allocates memory.  Each call of
+the generator function allocates a new generator.  The classes here
+are effectively restartable generators. Calling __call__ and __iter__
+resets them after a StopIteration.
+
+Due to the token protocol, which interleave next() calls with optional
+send() calls, this also allows us to separate these two calls (in a
+real generator, they are all in the same function).  The price to pay is
+the need to operate a state machine.
+"""
 import re
 
 from minim import tokens
