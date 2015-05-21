@@ -249,12 +249,13 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             if token_type.is_token:
                 token = token_type
                 if expected[0].is_token:
-                    self.assertIs(token, expected[0])
+                    self.assertIs(token, expected[0], repr(token.literal))
                 else:
-                    self.assertIsInstance(token, expected[0])
+                    self.assertIsInstance(
+                        token, expected[0], repr(token.literal))
             else:
-                self.assertIs(token_type, expected[0])
                 token = token_types.send(token_type)
+                self.assertIs(token_type, expected[0], repr(token.literal))
             self.assertEqual(token.literal, expected[1])
         self.assertEqual(buf.get(), '')
 
@@ -417,6 +418,33 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.AttributeValueDoubleCloseToken, '"'),
             (tokens.MarkupWhitespace, '\n\t'),
             (tokens.EmptyTagCloseToken, '/>')
+            ]
+        self.scan([xml], expected_tokens)
+
+    def test_cdata(self):
+        xml = "<![CDATA[Some <non-markup> text & [] symbols]]>"
+        expected_tokens = [
+            (tokens.CDataOpenToken, '<![CDATA['),
+            (tokens.CData, 'Some <non-markup> text & [] symbols'),
+            (tokens.CDataCloseToken, ']]>')
+            ]
+        self.scan([xml], expected_tokens)
+
+    def test_empty_cdata(self):
+        xml = "<![CDATA[]]>"
+        expected_tokens = [
+            (tokens.CDataOpenToken, '<![CDATA['),
+            (tokens.CDataCloseToken, ']]>')
+            ]
+        self.scan([xml], expected_tokens)
+
+    def test_short_cdata(self):
+        xml = "<![CDATA[Some <non-markup> text & []"
+        expected_tokens = [
+            (tokens.CDataOpenToken, '<![CDATA['),
+            (tokens.CData, 'Some <non-markup> text & ['),
+            (tokens.CData, ']'),
+            (tokens.BadlyFormedEndOfStream, '')
             ]
         self.scan([xml], expected_tokens)
 

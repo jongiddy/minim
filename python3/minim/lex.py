@@ -296,12 +296,16 @@ class TokenGenerator:
                         yield tokens.BadlyFormedLessThanToken
                         yield tokens.PCData(literal='!-')
                 elif ch == '[':
+                    buf.advance()
                     if buf.starts_with('CDATA['):
                         yield tokens.CDataOpenToken
-                        yield from self.parse_until(
+                        found = yield from self.parse_until(
                             buf, tokens.CData, ']]>')
                         if not buf.starts_with(']]>'):
-                            raise EOFError()
+                            assert not found, found
+                            assert not buf.get(), buf.get()
+                            yield tokens.BadlyFormedEndOfStream()
+                            return
                         yield tokens.CDataCloseToken
                     else:
                         # declaration

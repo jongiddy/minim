@@ -187,7 +187,7 @@ ProcessingInstructionOpenToken = SingletonMarkup(literal='<?')
 ProcessingInstructionCloseToken = SingletonMarkup(literal='?>')
 CommentOpenToken = SingletonMarkup(literal='<!--')
 CommentCloseToken = SingletonMarkup(literal='-->')
-CDataOpenToken = SingletonMarkup(literal='<[CDATA[')
+CDataOpenToken = SingletonMarkup(literal='<![CDATA[')
 CDataCloseToken = SingletonMarkup(literal=']]>')
 
 
