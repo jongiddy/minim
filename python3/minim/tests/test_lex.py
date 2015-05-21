@@ -157,8 +157,10 @@ class SentinelParserTests(unittest.TestCase):
         parse_sentinel = lex.SentinelParser()
         parse_sentinel(buf, tokens.Content, '?>')
         parse_sentinel = iter(parse_sentinel)
-        with self.assertRaises(StopIteration):
+        with self.assertRaises(StopIteration) as stop:
             next(parse_sentinel)
+        # Test that StopIteration indicates found is True
+        self.assertIs(stop.exception.value, True)
         self.assertEqual(buf.extract(), '')
         self.assertEqual(buf.get(), '?')
 
@@ -171,8 +173,10 @@ class SentinelParserTests(unittest.TestCase):
         self.assertIs(next(parse_sentinel), tokens.Content)
         token = parse_sentinel.send(tokens.Content)
         self.assertEqual(token.literal, 'more')
-        with self.assertRaises(StopIteration):
+        with self.assertRaises(StopIteration) as stop:
             next(parse_sentinel)
+        # Test that StopIteration indicates found is True
+        self.assertIs(stop.exception.value, True)
         self.assertEqual(buf.extract(), '')
         self.assertEqual(buf.get(), '?')
 
@@ -182,8 +186,10 @@ class SentinelParserTests(unittest.TestCase):
         parse_sentinel = lex.SentinelParser()
         parse_sentinel(buf, tokens.Content, '?>')
         parse_sentinel = iter(parse_sentinel)
-        with self.assertRaises(StopIteration):
+        with self.assertRaises(StopIteration) as stop:
             next(parse_sentinel)
+        # Test that StopIteration indicates found is False
+        self.assertIs(stop.exception.value, False)
         self.assertEqual(buf.extract(), '')
         self.assertEqual(buf.get(), '')
 
@@ -200,8 +206,30 @@ class SentinelParserTests(unittest.TestCase):
         token = parse_sentinel.send(tokens.Content)
         self.assertEqual(token.literal, '')
         self.assertIs(token.is_final, True)
-        with self.assertRaises(StopIteration):
+        with self.assertRaises(StopIteration) as stop:
             next(parse_sentinel)
+        # Test that StopIteration indicates found is False
+        self.assertIs(stop.exception.value, False)
+        self.assertEqual(buf.extract(), '')
+        self.assertEqual(buf.get(), '')
+
+    def test_parser_fails_on_partial_sentinel(self):
+        s = 'morefix?'
+        buf = iterseq.IterableAsSequence([s])
+        parse_sentinel = lex.SentinelParser()
+        parse_sentinel(buf, tokens.Content, '?>')
+        parse_sentinel = iter(parse_sentinel)
+        self.assertIs(next(parse_sentinel), tokens.Content)
+        token = parse_sentinel.send(tokens.Content)
+        self.assertEqual(token.literal, 'morefix')
+        self.assertIs(next(parse_sentinel), tokens.Content)
+        token = parse_sentinel.send(tokens.Content)
+        self.assertEqual(token.literal, '?')
+        self.assertIs(token.is_final, True)
+        with self.assertRaises(StopIteration) as stop:
+            next(parse_sentinel)
+        # Test that StopIteration indicates found is False
+        self.assertIs(stop.exception.value, False)
         self.assertEqual(buf.extract(), '')
         self.assertEqual(buf.get(), '')
 

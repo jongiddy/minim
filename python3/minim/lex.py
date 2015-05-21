@@ -23,10 +23,15 @@ def token_type_generator(string_iter):
 
 class SentinelParser:
 
-    """A non-allocating iterator for a sentinel."""
+    """A non-allocating iterator for a sentinel.
 
-    # Pre-allocated return value
-    stop_iteration = StopIteration()
+    On end of the iteration, the buffer will point either to the start
+    of the sentinel, or to the end of the stream.
+    """
+
+    # Pre-allocated return values
+    stop_iteration_found = StopIteration(True)
+    stop_iteration_not_found = StopIteration(False)
 
     def __call__(self, buf, token_type, sentinel):
         self.buf = buf
@@ -54,7 +59,12 @@ class SentinelParser:
             self.needs_final = False
         elif loc == 0:
             # sentinel or EOF found at start of string
-            self.stopped = self.stop_iteration
+            if self.buf.get():
+                # the next character must be the start of the sentinel
+                self.stopped = self.stop_iteration_found
+            else:
+                # reached the end of the stream
+                self.stopped = self.stop_iteration_not_found
             if self.needs_final:
                 self.is_final = True
                 self.needs_final = False
