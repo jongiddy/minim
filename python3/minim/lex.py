@@ -228,14 +228,12 @@ class NameParser(PatternParser):
 
 class TokenGenerator:
 
-    def __init__(self, buf):
-        self.buf = buf
+    def __init__(self):
         self.parse_name = NameParser()
         self.parse_space = WhitespaceParser()
         self.parse_until = SentinelParser()
 
-    def parse(self):
-        buf = self.buf
+    def parse(self, buf):
         # Whitespace before initial non-ws is not considered to be content
         yield from self.parse_space(buf, tokens.MarkupWhitespace)
         yield from self.parse_until(

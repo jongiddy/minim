@@ -243,8 +243,8 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         # fallback to ensure final test fails
         expected_tokens.append((tokens.Token(),))
         buf = iterseq.IterableAsSequence(stream)
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
+        scanner = lex.TokenGenerator()
+        token_types = scanner.parse(buf)
         for token_type, expected in zip(token_types, expected_tokens):
             if token_type.is_token:
                 token = token_type
@@ -495,8 +495,8 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.Token(),)
             ]
         buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
+        scanner = lex.TokenGenerator()
+        token_types = scanner.parse(buf)
         for token_type, expected in zip(token_types, expected_tokens):
             if token_type.is_token:
                 token = token_type
@@ -591,8 +591,8 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_invalid_processing_instruction(self):
         xml = '<??>'
         buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
+        scanner = lex.TokenGenerator()
+        token_types = scanner.parse(buf)
         not_well_formed = False
         s = ''
         for token_type in token_types:
@@ -652,8 +652,8 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             'ome>text'
             ]
         buf = iterseq.IterableAsSequence(xml)
-        scanner = lex.TokenGenerator(buf)
-        token_types = scanner.parse()
+        scanner = lex.TokenGenerator()
+        token_types = scanner.parse(buf)
         literal = ''
         content = ''
         for token_type in token_types:
