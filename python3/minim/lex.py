@@ -251,32 +251,28 @@ class TokenGenerator:
                     yield tokens.ProcessingInstructionOpenToken
                     yield from self.parse_name(
                         buf, tokens.ProcessingInstructionTarget)
-                    ws_after_name = yield from self.parse_space(
+                    ws_found = yield from self.parse_space(
                         buf, tokens.MarkupWhitespace)
-                    if not buf.starts_with('?>'):
-                        ch = buf.get()
-                        if not ch:
+                    if ws_found:
+                        found = yield from self.parse_until(
+                            buf, tokens.ProcessingInstructionData, '?>')
+                        if buf.starts_with('?>'):
+                            # `starts_with` is redundant, since `found`
+                            # indicates whether the sentinel was found.
+                            # `starts_with` consumes the characters
+                            assert found, found
+                        else:
+                            # must be EOS
+                            assert not found, found
                             yield tokens.BadlyFormedEndOfStream()
                             return
-                        if ch == '?':
-                            ch = buf.next()
-                            if not ch:
-                                yield tokens.BadlyFormedEndOfStream('?')
-                                return
-                            else:
-                                raise RuntimeError('Expected ?>')
+                    else:
                         if not buf.get():
                             yield tokens.BadlyFormedEndOfStream()
                             return
-                        if not ws_after_name:
-                            raise RuntimeError('Expected ?>')
-                        yield from self.parse_until(
-                            buf, tokens.ProcessingInstructionData, '?>')
                         if not buf.starts_with('?>'):
-                            ch = buf.get()  # '?' or ''
-                            assert not buf.next(), repr(buf.get())
-                            yield tokens.BadlyFormedEndOfStream(ch)
-                            return
+                            raise RuntimeError(
+                                'Expected ?>, got %r' % buf.get())
                     yield tokens.ProcessingInstructionCloseToken
                 else:
                     yield tokens.BadlyFormedLessThanToken
