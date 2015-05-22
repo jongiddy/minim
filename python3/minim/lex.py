@@ -17,6 +17,12 @@ import re
 from minim import iterseq, tokens
 
 
+# Pre-allocated return values
+_stop_iteration = StopIteration()
+_stop_iteration_found = StopIteration(True)
+_stop_iteration_not_found = StopIteration(False)
+
+
 def token_type_generator(string_iter):
     tg = TokenGenerator()
     buf = iterseq.IterableAsSequence(string_iter)
@@ -30,10 +36,6 @@ class SentinelParser:
     On end of the iteration, the buffer will point either to the start
     of the sentinel, or to the end of the stream.
     """
-
-    # Pre-allocated return values
-    stop_iteration_found = StopIteration(True)
-    stop_iteration_not_found = StopIteration(False)
 
     def __call__(self, buf, token_type, sentinel):
         self.buf = buf
@@ -63,10 +65,10 @@ class SentinelParser:
             # sentinel or EOF found at start of string
             if self.buf.get():
                 # the next character must be the start of the sentinel
-                self.stopped = self.stop_iteration_found
+                self.stopped = _stop_iteration_found
             else:
                 # reached the end of the stream
-                self.stopped = self.stop_iteration_not_found
+                self.stopped = _stop_iteration_not_found
             if self.needs_final:
                 self.is_final = True
                 self.needs_final = False
@@ -95,9 +97,6 @@ class LiteralResponder:
 
     """A non-allocating iterator for a literal value."""
 
-    # Pre-allocated return value
-    stop_iteration = StopIteration()
-
     def __call__(self, token_type, literal):
         self.token_type = token_type
         self.literal = literal
@@ -108,12 +107,12 @@ class LiteralResponder:
 
     def __next__(self):
         if self.literal is None:
-            raise self.stop_iteration
+            raise _stop_iteration
         yield self.token_type
 
     def send(self, val):
         if self.literal is None:
-            raise self.stop_iteration
+            raise _stop_iteration
         if val.is_token:
             val.set(literal=self.buf.literal)
         else:
@@ -125,10 +124,6 @@ class LiteralResponder:
 class PatternParser:
 
     """A non-allocating iterator for a regex pattern."""
-
-    # Pre-allocated return values
-    stop_iteration_found = StopIteration(True)
-    stop_iteration_not_found = StopIteration(False)
 
     def __init__(self, pat):
         self.pat = pat
@@ -153,9 +148,9 @@ class PatternParser:
         matched = self.buf.matching(self.pat)
         if matched == 0:
             if self.found:
-                self.stopped = self.stop_iteration_found
+                self.stopped = _stop_iteration_found
             else:
-                self.stopped = self.stop_iteration_not_found
+                self.stopped = _stop_iteration_not_found
             if not self.is_initial and not self.is_final:
                 self.is_final = True
                 return self.token_type
@@ -165,7 +160,7 @@ class PatternParser:
             self.found = True
             if matched < 0:
                 self.is_final = True
-                self.stopped = self.stop_iteration_found
+                self.stopped = _stop_iteration_found
             return self.token_type
 
     def send(self, val):
@@ -203,7 +198,7 @@ class NameParser(PatternParser):
                 self.buf.matching(self.invalid_initial, extract=False)):
             # initial character might match pattern, but is disallowed
             # as initial name character, so exit here.
-            self.stopped = self.stop_iteration_not_found
+            self.stopped = _stop_iteration_not_found
             raise self.stopped
         return super().__next__()
 
