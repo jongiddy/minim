@@ -304,7 +304,8 @@ class TokenGenerator:
                         yield tokens.CDataCloseToken
                     else:
                         # declaration
-                        ...
+                        raise NotImplementedError(
+                            'Declarations not implemented')
                 else:
                     yield tokens.BadlyFormedLessThanToken
                     yield tokens.PCData(literal='!')
