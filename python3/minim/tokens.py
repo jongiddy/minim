@@ -36,6 +36,15 @@ class Token:
         self.is_initial = is_initial
         self.is_final = is_final
 
+    @classmethod
+    def is_a(cls, token_type):
+        """Does this token match the token type.
+
+        :param class token_type: the class for the desired token.
+        """
+        # XXX - won't work for submitted tokens (2nd arg to get_token)
+        return issubclass(cls, token_type)
+
     def set(self, **kw):
         self._literal = kw.get('literal')
         self._encoding = kw.get('encoding')
@@ -164,31 +173,108 @@ class SingletonMarkup(Markup):
         raise ImmutableTokenException('Immutable token cannot be modified')
 
 
-StartOrEmptyTagOpenToken = SingletonMarkup(literal='<')
-EndTagOpenToken = SingletonMarkup(literal='</')
-AttributeEqualsToken = SingletonMarkup(literal='=')
+class StartOrEmptyTagOpen(SingletonMarkup):
+    literal = '<'
+
+StartOrEmptyTagOpenToken = StartOrEmptyTagOpen()
+
+
+class EndTagOpen(SingletonMarkup):
+    literal = '</'
+
+EndTagOpenToken = EndTagOpen()
+
+
+class AttributeEquals(SingletonMarkup):
+    literal = '='
+
+AttributeEqualsToken = AttributeEquals()
 
 
 class AttributeValueOpen(SingletonMarkup):
     pass
-AttributeValueDoubleOpenToken = AttributeValueOpen(literal='"')
-AttributeValueSingleOpenToken = AttributeValueOpen(literal="'")
+
+
+class AttributeValueDoubleOpen(AttributeValueOpen):
+    literal = '"'
+
+AttributeValueDoubleOpenToken = AttributeValueDoubleOpen()
+
+
+class AttributeValueSingleOpen(AttributeValueOpen):
+    literal = "'"
+
+AttributeValueSingleOpenToken = AttributeValueSingleOpen()
 
 
 class AttributeValueClose(SingletonMarkup):
     pass
-AttributeValueDoubleCloseToken = AttributeValueClose(literal='"')
-AttributeValueSingleCloseToken = AttributeValueClose(literal="'")
 
-StartTagCloseToken = SingletonMarkup(literal='>')
-EmptyTagCloseToken = SingletonMarkup(literal='/>')
-EndTagCloseToken = SingletonMarkup(literal='>')
-ProcessingInstructionOpenToken = SingletonMarkup(literal='<?')
-ProcessingInstructionCloseToken = SingletonMarkup(literal='?>')
-CommentOpenToken = SingletonMarkup(literal='<!--')
-CommentCloseToken = SingletonMarkup(literal='-->')
-CDataOpenToken = SingletonMarkup(literal='<![CDATA[')
-CDataCloseToken = SingletonMarkup(literal=']]>')
+
+class AttributeValueDoubleClose(AttributeValueClose):
+    literal = '"'
+
+AttributeValueDoubleCloseToken = AttributeValueDoubleClose()
+
+
+class AttributeValueSingleClose(AttributeValueClose):
+    literal = "'"
+
+AttributeValueSingleCloseToken = AttributeValueSingleClose()
+
+
+class StartTagClose(SingletonMarkup):
+    literal = '>'
+
+StartTagCloseToken = StartTagClose()
+
+
+class EmptyTagClose(SingletonMarkup):
+    literal = '/>'
+
+EmptyTagCloseToken = EmptyTagClose()
+
+
+class EndTagClose(SingletonMarkup):
+    literal = '>'
+
+EndTagCloseToken = EndTagClose()
+
+
+class ProcessingInstructionOpen(SingletonMarkup):
+    literal = '<?'
+
+ProcessingInstructionOpenToken = ProcessingInstructionOpen()
+
+
+class ProcessingInstructionClose(SingletonMarkup):
+    literal = '?>'
+
+ProcessingInstructionCloseToken = ProcessingInstructionClose()
+
+
+class CommentOpen(SingletonMarkup):
+    literal = '<!--'
+
+CommentOpenToken = CommentOpen()
+
+
+class CommentClose(SingletonMarkup):
+    literal = '-->'
+
+CommentCloseToken = CommentClose()
+
+
+class CDataOpen(SingletonMarkup):
+    literal = '<![CDATA['
+
+CDataOpenToken = CDataOpen()
+
+
+class CDataClose(SingletonMarkup):
+    literal = ']]>'
+
+CDataCloseToken = CDataClose()
 
 
 class BadlyFormedEndOfStream(Markup):
