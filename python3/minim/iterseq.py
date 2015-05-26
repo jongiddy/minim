@@ -20,7 +20,10 @@ class IterableAsSequence:
         """
         buf = self._buf
         if buf is None:
-            buf = self._buf = next(self._iter)
+            try:
+                buf = self._buf = next(self._iter)
+            except StopIteration:
+                return -1
         current = self._current
         if len(buf) - current < n:
             if current > 0:
@@ -48,6 +51,8 @@ class IterableAsSequence:
         """Return the character at the current location."""
         current = self.ensure(1)
         if current < 0:
+            if self._buf is None:
+                return None
             return self._buf[:0]  # Empty buffer of same type
         return self._buf[current]
 
@@ -67,6 +72,8 @@ class IterableAsSequence:
 
     def extract(self):
         buf = self._buf
+        if buf is None:
+            return None
         start = self._start
         current = self._current
         if start == 0 and current == len(buf):
@@ -121,6 +128,8 @@ class IterableAsSequence:
         if start < 0:
             # EOF and remaining characters < sentinel length
             # -> sentinel can never appear
+            if buf is None:
+                return 0
             self._start = self._current
             self._current = len(buf)
             return self._start - self._current

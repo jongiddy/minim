@@ -11,11 +11,6 @@ class IterableAsSequenceInitTest(unittest.TestCase):
         buf = iterseq.IterableAsSequence(['Hello, ', 'World!'])
         self.assertEqual(buf.get(), 'H')
 
-    def test_empty_is_ok(self):
-        buf = iterseq.IterableAsSequence([])
-        with self.assertRaises(StopIteration):
-            buf.next()
-
     def test_bytes_are_ok(self):
         buf = iterseq.IterableAsSequence([b'Hello', b'World!'])
         self.assertEqual(buf.get(), b'H'[0])
@@ -30,6 +25,33 @@ class IterableAsSequenceInitTest(unittest.TestCase):
             f.seek(0)
             buf = iterseq.IterableAsSequence(f)
             self.assertEqual(buf.get(), 'H')
+
+
+class EmptyIterableAsSequenceTest(unittest.TestCase):
+
+    """Test empty iterable in constructor.
+
+    For an empty sequence, the type of the buffer is unknown, so calls
+    that normally return an empty character sequence on EOF return None.
+    """
+
+    def setUp(self):
+        self.buf = iterseq.IterableAsSequence([])
+
+    def test_get(self):
+        self.assertIs(self.buf.get(), None)
+
+    def test_matching(self):
+        self.assertEqual(self.buf.matching(re.compile('d')), 0)
+        self.assertIs(self.buf.extract(), None)
+
+    def test_match_to_sentinel(self):
+        self.assertEqual(self.buf.match_to_sentinel('foo'), 0)
+        self.assertIs(self.buf.extract(), None)
+
+    def test_starts_with(self):
+        self.assertFalse(self.buf.starts_with('foo'))
+        self.assertIs(self.buf.extract(), None)
 
 
 class IterableAsSequenceTest(unittest.TestCase):
