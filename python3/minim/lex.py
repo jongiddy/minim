@@ -12,6 +12,8 @@ send() calls, this also allows us to separate these two calls (in a
 real generator, they are all in the same function).  The price to pay is
 the need to operate a state machine.
 """
+import abc
+from collections.abc import Iterator
 import re
 
 from minim import iterseq, tokens
@@ -29,7 +31,7 @@ def token_type_generator(string_iter):
     yield from tg.parse(buf)
 
 
-class SentinelParser:
+class SentinelParser(Iterator):
 
     """A non-allocating iterator for a sentinel.
 
@@ -49,7 +51,7 @@ class SentinelParser:
         self.needs_final = False
         self.is_initial = True
         self.is_final = False
-        return self
+        return super().__iter__()
 
     def __next__(self):
         if self.stopped is not None:
@@ -93,16 +95,13 @@ class SentinelParser:
         return val
 
 
-class LiteralResponder:
+class LiteralResponder(Iterator):
 
     """A non-allocating iterator for a literal value."""
 
     def __call__(self, token_type, literal):
         self.token_type = token_type
         self.literal = literal
-        return self
-
-    def __iter__(self):
         return self
 
     def __next__(self):
@@ -121,7 +120,7 @@ class LiteralResponder:
         return val
 
 
-class PatternParser:
+class PatternParser(Iterator):
 
     """A non-allocating iterator for a regex pattern."""
 
@@ -138,7 +137,7 @@ class PatternParser:
         self.found = False
         self.is_initial = True
         self.is_final = False
-        return self
+        return super().__iter__()
 
     def __next__(self):
         if self.stopped is not None:
@@ -209,7 +208,15 @@ class NameParser(PatternParser):
             bool(self.pattern.match(s[:1])))
 
 
-class TokenGenerator:
+class GeneratesTokens(metaclass=abc.ABCMeta):
+
+    @abc.abstractmethod
+    def parse(self, buf):
+        """Parse a buffer and yield tokens."""
+        raise NotImplementedError()
+
+
+class TokenGenerator(GeneratesTokens):
 
     def __init__(self):
         self.parse_name = NameParser()

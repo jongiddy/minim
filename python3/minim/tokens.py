@@ -223,13 +223,17 @@ class AttributeValueSingleClose(AttributeValueClose):
 AttributeValueSingleCloseToken = AttributeValueSingleClose()
 
 
-class StartTagClose(SingletonMarkup):
+class StartOrEmptyTagClose(SingletonMarkup):
+    pass
+
+
+class StartTagClose(StartOrEmptyTagClose):
     literal = '>'
 
 StartTagCloseToken = StartTagClose()
 
 
-class EmptyTagClose(SingletonMarkup):
+class EmptyTagClose(StartOrEmptyTagClose):
     literal = '/>'
 
 EmptyTagCloseToken = EmptyTagClose()
