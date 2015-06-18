@@ -12,8 +12,7 @@ send() calls, this also allows us to separate these two calls (in a
 real generator, they are all in the same function).  The price to pay is
 the need to operate a state machine.
 """
-import abc
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 import re
 
 from minim import iterseq, tokens
@@ -23,12 +22,6 @@ from minim import iterseq, tokens
 _stop_iteration = StopIteration()
 _stop_iteration_found = StopIteration(True)
 _stop_iteration_not_found = StopIteration(False)
-
-
-def token_type_generator(string_iter):
-    tg = TokenGenerator()
-    buf = iterseq.IterableAsSequence(string_iter)
-    yield from tg.parse(buf)
 
 
 class SentinelParser(Iterator):
@@ -208,22 +201,31 @@ class NameParser(PatternParser):
             bool(self.pattern.match(s[:1])))
 
 
-class GeneratesTokens(metaclass=abc.ABCMeta):
+class GeneratesTokens(Iterable):
 
-    @abc.abstractmethod
-    def parse(self, buf):
-        """Parse a buffer and yield tokens."""
-        raise NotImplementedError()
+    """An iteratable that yields token types, and responds to send()
+    with the token matching the token type."""
 
 
 class TokenGenerator(GeneratesTokens):
 
-    def __init__(self):
+    def __init__(self, buf):
+        self.buf = buf
+        self._generator = None
         self.parse_name = NameParser()
         self.parse_space = WhitespaceParser()
         self.parse_until = SentinelParser()
 
-    def parse(self, buf):
+    @classmethod
+    def from_strings(cls, string_iter):
+        """Generates tokens from the supplied iterator."""
+        return cls(iterseq.IterableAsSequence(string_iter))
+
+    def __iter__(self):
+        self._generator = self.generator(self.buf)
+        return self._generator
+
+    def generator(self, buf):
         # Whitespace before initial non-ws is not considered to be content
         yield from self.parse_space(buf, tokens.MarkupWhitespace)
         yield from self.parse_until(
@@ -385,3 +387,38 @@ class TokenGenerator(GeneratesTokens):
                 yield tokens.BadlyFormedLessThanToken
             yield from self.parse_space(buf, tokens.WhitespaceContent)
             yield from self.parse_until(buf, tokens.PCData, '<')
+
+    def get_token(self, token_type, token=None):
+        """Return the current token in the input stream.
+
+        If the token type is of interest to the processor, calling this
+        method will return an actual token, which can be processed
+        further.
+
+        If the optional ``token`` parameter is not provided, this will
+        usually allocate a new token.
+
+        If the optional ``token`` parameter is provided, this function
+        **may** choose to use the provided (subclass of) ``Token`` as
+        the returned token.  This allows the opportunity for the system
+        to avoid allocating memory for the token.
+
+        Note that this method is not required to use the provided token,
+        so the return value must be used for subsequent processing of
+        the current token.
+
+        :param token_type: A Token Type returned from the iterator
+        :param token: An optional Token that can be set
+        :return: The current token in the input stream
+        :rtype: minim.tokens.Token
+        """
+        if token_type.is_token:
+            # The iterator is permitted to return a token for next()
+            # rather than a token_type.  In this case, just return the
+            # token again.
+            return token_type
+        else:
+            if token is None:
+                return self._generator.send(token_type)
+            else:
+                return self._generator.send(token)

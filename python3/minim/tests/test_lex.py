@@ -243,8 +243,8 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         # fallback to ensure final test fails
         expected_tokens.append((tokens.Token(),))
         buf = iterseq.IterableAsSequence(stream)
-        scanner = lex.TokenGenerator()
-        token_types = scanner.parse(buf)
+        scanner = lex.TokenGenerator(buf)
+        token_types = iter(scanner)
         for token_type, expected in zip(token_types, expected_tokens):
             if token_type.is_token:
                 token = token_type
@@ -495,13 +495,9 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.Token(),)
             ]
         buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator()
-        token_types = scanner.parse(buf)
+        token_types = lex.TokenGenerator(buf)
         for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
+            token = token_types.get_token(token_type)
             self.assertEqual(token_type, expected[0])
             self.assertEqual(token.literal, expected[1])
             self.assertIs(token_type.is_well_formed, expected[2])
@@ -591,20 +587,20 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_invalid_processing_instruction(self):
         xml = '<??>'
         buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator()
-        token_types = scanner.parse(buf)
-        not_well_formed = False
+        scanner = lex.TokenGenerator(buf)
+        token_types = iter(scanner)
+        well_formed = True
         s = ''
         for token_type in token_types:
             if not token_type.is_well_formed:
-                not_well_formed = True
+                well_formed = False
             if token_type.is_token:
                 token = token_type
             else:
                 token = token_types.send(token_type)
             if token_type.is_content:
                 s += token.content
-        self.assertIs(not_well_formed, True)
+        self.assertFalse(well_formed)
         self.assertEqual(s, xml)
 
     def test_markupish_content(self):
@@ -652,15 +648,11 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             'ome>text'
             ]
         buf = iterseq.IterableAsSequence(xml)
-        scanner = lex.TokenGenerator()
-        token_types = scanner.parse(buf)
+        scanner = lex.TokenGenerator(buf)
         literal = ''
         content = ''
-        for token_type in token_types:
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
+        for token_type in scanner:
+            token = scanner.get_token(token_type)
             literal += token.literal
             if token_type.is_content:
                 content += token.content
