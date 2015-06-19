@@ -9,11 +9,7 @@ class NamespaceOpen(tokens.Token):
         self.prefix = prefix
 
 
-class GeneratesNamespaceTokens(lex.GeneratesTokens):
-    pass
-
-
-class TokenGenerator(lex.YieldBasedTokenGenerator, GeneratesNamespaceTokens):
+class TokenGenerator(lex.YieldBasedTokenGenerator):
 
     """A generator to add namespace tokens to a basic token generator.
 
