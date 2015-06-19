@@ -39,6 +39,14 @@ real	0m26.773s
 user	0m26.777s
 sys		0m0.008s
 
+$ time PYTHONPATH=${MINIM_HOME}/python3 python3 count_tags_minim_ns.py ../xml/gb_20140923.xml
+222392
+
+real	0m22.806s
+user	0m22.806s
+sys	0m0.012s
+
 ```
+
 
 There's a long way to go, speed-wise!  But at least the answers match...
