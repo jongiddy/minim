@@ -12,6 +12,7 @@ send() calls, this also allows us to separate these two calls (in a
 real generator, they are all in the same function).  The price to pay is
 the need to operate a state machine.
 """
+import abc
 from collections.abc import Iterable, Iterator
 import re
 
@@ -201,17 +202,72 @@ class NameParser(PatternParser):
             bool(self.pattern.match(s[:1])))
 
 
-class GeneratesTokens(Iterable):
+class GeneratesTokens(Iterable, metaclass=abc.ABCMeta):
 
-    """An iteratable that yields token types, and responds to send()
+    """An iterable that yields token types, and provides a method to
+    obtain the token matching the token type."""
+
+    def get_token(self, token_type, token=None):
+        """Return the current token in the input stream.
+
+        If the token type is of interest to the processor, calling this
+        method will return an actual token, which can be processed
+        further.
+
+        If the optional ``token`` parameter is not provided, this will
+        usually allocate a new token.
+
+        If the optional ``token`` parameter is provided, this function
+        **may** choose to use the provided (subclass of) ``Token`` as
+        the returned token.  This allows the opportunity for the system
+        to avoid allocating memory for the token.
+
+        Note that this method is not required to use the provided token,
+        so the return value must be used for subsequent processing of
+        the current token.
+
+        :param token_type: A Token Type returned from the iterator
+        :param token: An optional Token that can be set
+        :return: The current token in the input stream
+        :rtype: minim.tokens.Token
+        """
+
+
+class YieldBasedTokenGenerator(GeneratesTokens):
+
+    """An iterable that yields token types, and responds to send()
     with the token matching the token type."""
 
+    def __init__(self):
+        self.generator = None
 
-class TokenGenerator(GeneratesTokens):
+    def __iter__(self):
+        self.generator = self.create_generator()
+        return self.generator
+
+    @abc.abstractmethod
+    def create_generator(self):
+        pass
+
+    def get_token(self, token_type, token=None):
+        """Implementation of get_token that uses send() to the generator."""
+        if token_type.is_token:
+            # The iterator is permitted to return a token for next()
+            # rather than a token_type.  In this case, just return the
+            # token again.
+            return token_type
+        else:
+            if token is None:
+                return self.generator.send(token_type)
+            else:
+                return self.generator.send(token)
+
+
+class TokenGenerator(YieldBasedTokenGenerator):
 
     def __init__(self, buf):
         self.buf = buf
-        self._generator = None
+        self.generator = None
         self.parse_name = NameParser()
         self.parse_space = WhitespaceParser()
         self.parse_until = SentinelParser()
@@ -221,11 +277,10 @@ class TokenGenerator(GeneratesTokens):
         """Generates tokens from the supplied iterator."""
         return cls(iterseq.IterableAsSequence(string_iter))
 
-    def __iter__(self):
-        self._generator = self.generator(self.buf)
-        return self._generator
+    def create_generator(self):
+        return self.parse(self.buf)
 
-    def generator(self, buf):
+    def parse(self, buf):
         # Whitespace before initial non-ws is not considered to be content
         yield from self.parse_space(buf, tokens.MarkupWhitespace)
         yield from self.parse_until(
@@ -387,38 +442,3 @@ class TokenGenerator(GeneratesTokens):
                 yield tokens.BadlyFormedLessThanToken
             yield from self.parse_space(buf, tokens.WhitespaceContent)
             yield from self.parse_until(buf, tokens.PCData, '<')
-
-    def get_token(self, token_type, token=None):
-        """Return the current token in the input stream.
-
-        If the token type is of interest to the processor, calling this
-        method will return an actual token, which can be processed
-        further.
-
-        If the optional ``token`` parameter is not provided, this will
-        usually allocate a new token.
-
-        If the optional ``token`` parameter is provided, this function
-        **may** choose to use the provided (subclass of) ``Token`` as
-        the returned token.  This allows the opportunity for the system
-        to avoid allocating memory for the token.
-
-        Note that this method is not required to use the provided token,
-        so the return value must be used for subsequent processing of
-        the current token.
-
-        :param token_type: A Token Type returned from the iterator
-        :param token: An optional Token that can be set
-        :return: The current token in the input stream
-        :rtype: minim.tokens.Token
-        """
-        if token_type.is_token:
-            # The iterator is permitted to return a token for next()
-            # rather than a token_type.  In this case, just return the
-            # token again.
-            return token_type
-        else:
-            if token is None:
-                return self._generator.send(token_type)
-            else:
-                return self._generator.send(token)
