@@ -25,9 +25,9 @@ class TokenGenerator(lex.YieldBasedTokenGenerator):
         self.xmlns_url_limit = 2048
 
     @classmethod
-    def from_token_generator(cls, token_generator):
-        assert isinstance(token_generator, lex.GeneratesTokens)
-        return cls(token_generator)
+    def from_strings(cls, string_iter):
+        """Generates tokens from the supplied iterator."""
+        return cls(lex.TokenGenerator.from_strings(string_iter))
 
     def create_generator(self):
         return self.insert_namespace_tokens(self.token_generator)

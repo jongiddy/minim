@@ -12,8 +12,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         # fallback to ensure final test fails
         expected_tokens.append((tokens.Token(),))
         buf = iterseq.IterableAsSequence(stream)
-        scanner = nslex.TokenGenerator.from_token_generator(
-            lex.TokenGenerator(buf))
+        scanner = nslex.TokenGenerator(lex.TokenGenerator(buf))
         token_types = iter(scanner)
         for token_type, expected in zip(token_types, expected_tokens):
             if token_type.is_token:
@@ -188,13 +187,13 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
 
     def test_literal_ok(self):
         xml = [
-            '<?xml version="1.0"?><some tags="',
-            'foo">This <!-- a comment -->is',
+            '<?xml version="1.0"?><tns:some tags="',
+            'foo" xmlns:tns="http://url.exam',
+            'ple.com/">This <!-- a comment -->is',
             'some </s',
             'ome>text'
             ]
-        scanner = nslex.TokenGenerator.from_token_generator(
-            lex.TokenGenerator.from_strings(xml))
+        scanner = nslex.TokenGenerator.from_strings(xml)
         token_types = iter(scanner)
         literal = ''
         content = ''
