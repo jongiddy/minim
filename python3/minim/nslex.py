@@ -57,6 +57,8 @@ class TokenGenerator(lex.YieldBasedTokenGenerator):
                                 cached_tokens.append(
                                     token_generator.get_token(token_type))
                                 token_type = next(token_iter)
+                            if token_type.is_a(tokens.BadlyFormedEndOfStream):
+                                break
                             assert token_type.is_a(
                                 tokens.AttributeEquals), token_type
                             cached_tokens.append(
@@ -66,6 +68,8 @@ class TokenGenerator(lex.YieldBasedTokenGenerator):
                                 cached_tokens.append(
                                     token_generator.get_token(token_type))
                                 token_type = next(token_iter)
+                            if token_type.is_a(tokens.BadlyFormedEndOfStream):
+                                break
                             assert token_type.is_a(
                                 tokens.AttributeValueOpen), token_type
                             cached_tokens.append(
@@ -79,6 +83,8 @@ class TokenGenerator(lex.YieldBasedTokenGenerator):
                                     raise RuntimeError('URL too long')
                                 cached_tokens.append(token)
                                 token_type = next(token_iter)
+                            if token_type.is_a(tokens.BadlyFormedEndOfStream):
+                                break
                             assert token_type.is_a(
                                 tokens.AttributeValueClose), token_type
                             cached_tokens.append(

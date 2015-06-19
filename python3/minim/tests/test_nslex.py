@@ -55,9 +55,105 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         xml = '<ns:tag'
         expected_tokens = [
             (tokens.StartOrEmptyTagOpenToken, '<'),
-            (tokens.TagName, 'tag'),
+            (tokens.TagName, 'ns:tag'),
             (tokens.TagName, ''),
             (tokens.BadlyFormedEndOfStream, '')
+            ]
+        self.scan([xml], expected_tokens)
+
+    def test_short_start_tag_space(self):
+        xml = '<ns:tag '
+        expected_tokens = [
+            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.TagName, 'ns:tag'),
+            (tokens.MarkupWhitespace, ' '),
+            (tokens.MarkupWhitespace, ''),
+            (tokens.BadlyFormedEndOfStream, '')
+            ]
+        self.scan([xml], expected_tokens)
+
+    def test_short_start_tag_space_attr(self):
+        xml = '<ns:tag xmlns:ns'
+        expected_tokens = [
+            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.TagName, 'ns:tag'),
+            (tokens.MarkupWhitespace, ' '),
+            (tokens.AttributeName, 'xmlns:ns'),
+            (tokens.AttributeName, ''),
+            (tokens.BadlyFormedEndOfStream, '')
+            ]
+        self.scan([xml], expected_tokens)
+
+    def test_short_start_tag_space_attr_equals(self):
+        xml = '<ns:tag xmlns:ns='
+        expected_tokens = [
+            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.TagName, 'ns:tag'),
+            (tokens.MarkupWhitespace, ' '),
+            (tokens.AttributeName, 'xmlns:ns'),
+            (tokens.AttributeEqualsToken, '='),
+            (tokens.BadlyFormedEndOfStream, '')
+            ]
+        self.scan([xml], expected_tokens)
+
+    def test_short_start_tag_space_attr_equals_quote(self):
+        xml = '<ns:tag xmlns:ns="'
+        expected_tokens = [
+            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.TagName, 'ns:tag'),
+            (tokens.MarkupWhitespace, ' '),
+            (tokens.AttributeName, 'xmlns:ns'),
+            (tokens.AttributeEqualsToken, '='),
+            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.BadlyFormedEndOfStream, '')
+            ]
+        self.scan([xml], expected_tokens)
+
+    def test_short_start_tag_space_attr_equals_quote_value(self):
+        xml = '<ns:tag xmlns:ns="http://url.example.com/'
+        expected_tokens = [
+            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.TagName, 'ns:tag'),
+            (tokens.MarkupWhitespace, ' '),
+            (tokens.AttributeName, 'xmlns:ns'),
+            (tokens.AttributeEqualsToken, '='),
+            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeValue, 'http://url.example.com/'),
+            (tokens.AttributeValue, ''),
+            (tokens.BadlyFormedEndOfStream, '')
+            ]
+        self.scan([xml], expected_tokens)
+
+    def test_short_start_tag_space_attribute(self):
+        xml = '<ns:tag xmlns:ns="http://url.example.com/"'
+        expected_tokens = [
+            (nslex.NamespaceOpen, ''),
+            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.TagName, 'ns:tag'),
+            (tokens.MarkupWhitespace, ' '),
+            (tokens.AttributeName, 'xmlns:ns'),
+            (tokens.AttributeEqualsToken, '='),
+            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeValue, 'http://url.example.com/'),
+            (tokens.AttributeValueDoubleCloseToken, '"'),
+            (tokens.BadlyFormedEndOfStream, '')
+            ]
+        self.scan([xml], expected_tokens)
+
+    def test_short_empty_tag_space_attribute_slash(self):
+        xml = '<ns:tag xmlns:ns="http://url.example.com/" /'
+        expected_tokens = [
+            (nslex.NamespaceOpen, ''),
+            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.TagName, 'ns:tag'),
+            (tokens.MarkupWhitespace, ' '),
+            (tokens.AttributeName, 'xmlns:ns'),
+            (tokens.AttributeEqualsToken, '='),
+            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeValue, 'http://url.example.com/'),
+            (tokens.AttributeValueDoubleCloseToken, '"'),
+            (tokens.MarkupWhitespace, ' '),
+            (tokens.BadlyFormedEndOfStream, '/')
             ]
         self.scan([xml], expected_tokens)
 
