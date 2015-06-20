@@ -34,47 +34,46 @@ class TokenGenerator(lex.YieldBasedTokenGenerator):
 
     def insert_namespace_tokens(self, token_generator):
         cached_tokens = []
-        token_iter = iter(token_generator)
-        for token_type in token_iter:
+        for token_type in token_generator:
             if token_type.is_a(tokens.StartOrEmptyTagOpen):
                 cached_tokens = [token_generator.get_token(token_type)]
-                token_type = next(token_iter)
+                token_type = token_generator.next()
                 while not token_type.is_a(tokens.StartOrEmptyTagClose):
                     token = token_generator.get_token(token_type)
                     if token_type.is_a(tokens.AttributeName):
                         name = token.literal
                         cached_tokens.append(token)
-                        token_type = next(token_iter)
+                        token_type = token_generator.next()
                         while token_type.is_a(tokens.AttributeName):
                             token = token_generator.get_token(token_type)
                             name += token.literal
                             if len(name) > self.xmlns_name_limit:
                                 raise RuntimeError('name too long')
                             cached_tokens.append(token)
-                            token_type = next(token_iter)
+                            token_type = token_generator.next()
                         if name.startswith('xmlns'):
                             while token_type.is_a(tokens.MarkupWhitespace):
                                 cached_tokens.append(
                                     token_generator.get_token(token_type))
-                                token_type = next(token_iter)
+                                token_type = token_generator.next()
                             if token_type.is_a(tokens.BadlyFormedEndOfStream):
                                 break
                             assert token_type.is_a(
                                 tokens.AttributeEquals), token_type
                             cached_tokens.append(
                                 token_generator.get_token(token_type))
-                            token_type = next(token_iter)
+                            token_type = token_generator.next()
                             while token_type.is_a(tokens.MarkupWhitespace):
                                 cached_tokens.append(
                                     token_generator.get_token(token_type))
-                                token_type = next(token_iter)
+                                token_type = token_generator.next()
                             if token_type.is_a(tokens.BadlyFormedEndOfStream):
                                 break
                             assert token_type.is_a(
                                 tokens.AttributeValueOpen), token_type
                             cached_tokens.append(
                                 token_generator.get_token(token_type))
-                            token_type = next(token_iter)
+                            token_type = token_generator.next()
                             value = ''
                             while token_type.is_a(tokens.AttributeValue):
                                 token = token_generator.get_token(token_type)
@@ -82,7 +81,7 @@ class TokenGenerator(lex.YieldBasedTokenGenerator):
                                 if len(value) > self.xmlns_url_limit:
                                     raise RuntimeError('URL too long')
                                 cached_tokens.append(token)
-                                token_type = next(token_iter)
+                                token_type = token_generator.next()
                             if token_type.is_a(tokens.BadlyFormedEndOfStream):
                                 break
                             assert token_type.is_a(
@@ -98,10 +97,10 @@ class TokenGenerator(lex.YieldBasedTokenGenerator):
                             result = yield NamespaceOpen
                             if result is not None:
                                 yield NamespaceOpen(namespace, prefix)
-                            token_type = next(token_iter)
+                            token_type = token_generator.next()
                     else:
                         cached_tokens.append(token)
-                        token_type = next(token_iter)
+                        token_type = token_generator.next()
                 yield from cached_tokens
             # Standard way to pass tokens through:
             result = yield token_type

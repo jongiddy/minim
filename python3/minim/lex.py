@@ -249,6 +249,9 @@ class YieldBasedTokenGenerator(GeneratesTokens):
     def create_generator(self):
         pass
 
+    def next(self):
+        return next(self.generator)
+
     def get_token(self, token_type, token=None):
         """Implementation of get_token that uses send() to the generator."""
         if token_type.is_token:
@@ -278,6 +281,9 @@ class StateBasedTokenGenerator(GeneratesTokens):
     @abc.abstractmethod
     def create_generator(self):
         pass
+
+    def next(self):
+        return next(self.generator)
 
     def get_token(self, token_type, token=None):
         """Implementation of get_token that uses send() to the generator."""
