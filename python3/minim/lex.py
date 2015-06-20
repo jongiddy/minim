@@ -263,7 +263,35 @@ class YieldBasedTokenGenerator(GeneratesTokens):
                 return self.generator.send(token)
 
 
-class TokenGenerator(YieldBasedTokenGenerator):
+class StateBasedTokenGenerator(GeneratesTokens):
+
+    """An iterable that yields token types, and uses buffer state to
+    return the token matching the token type."""
+
+    def __init__(self):
+        self.generator = None
+
+    def __iter__(self):
+        self.generator = self.create_generator()
+        return self.generator
+
+    @abc.abstractmethod
+    def create_generator(self):
+        pass
+
+    def get_token(self, token_type, token=None):
+        """Implementation of get_token that uses send() to the generator."""
+        if token_type.is_token:
+            # The iterator is permitted to return a token for next()
+            # rather than a token_type.  In this case, just return the
+            # token again.
+            return token_type
+        else:
+            # XXX - doesn't use token
+            return token_type(self.buf.extract())
+
+
+class TokenGenerator(StateBasedTokenGenerator):
 
     def __init__(self, buf):
         self.buf = buf

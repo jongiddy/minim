@@ -106,4 +106,4 @@ class TokenGenerator(lex.YieldBasedTokenGenerator):
             # Standard way to pass tokens through:
             result = yield token_type
             if result is not None:
-                yield token_iter.send(result)
+                yield token_generator.get_token(token_type)
