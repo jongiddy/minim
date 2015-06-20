@@ -207,3 +207,13 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
                 content += token.content
         self.assertEqual(literal, ''.join(xml))
         self.assertEqual(content, 'This issome text')
+
+    def test_namespace_values(self):
+        xml = ['<tag xmlns:foo="bar">']
+        scanner = nslex.TokenGenerator.from_strings(xml)
+        token_types = iter(scanner)
+        token_type = next(token_types)
+        self.assertTrue(token_type.is_a(nslex.NamespaceOpen))
+        token = scanner.get_token(token_type)
+        self.assertEqual(token.prefix, 'foo')
+        self.assertEqual(token.namespace, 'bar')
