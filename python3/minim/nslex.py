@@ -9,7 +9,7 @@ class NamespaceOpen(tokens.Token):
         self.prefix = prefix
 
 
-class TokenGenerator(lex.YieldBasedTokenGenerator):
+class TokenGenerator(lex.SendBasedTokenGenerator):
 
     """A generator to add namespace tokens to a basic token generator.
 
@@ -20,6 +20,7 @@ class TokenGenerator(lex.YieldBasedTokenGenerator):
     """
 
     def __init__(self, token_generator):
+        super().__init__()
         self.token_generator = token_generator
         self.xmlns_name_limit = 512
         self.xmlns_url_limit = 2048

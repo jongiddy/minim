@@ -207,6 +207,26 @@ class GeneratesTokens(Iterable, metaclass=abc.ABCMeta):
     """An iterable that yields token types, and provides a method to
     obtain the token matching the token type."""
 
+    @abc.abstractmethod
+    def next(self):
+        """Return the current token type in the input stream.
+
+        This may return either a token type or a token.  In either case,
+        the returned object can be interrogated for properties to
+        determine whether it is of interest to the caller.
+
+        If the caller needs the token, they call ``get_token`` to obtain
+        a token.  In some caes, this just returns the same instance.
+        """
+
+    @abc.abstractmethod
+    def token_type_to_token(self, token_type, token):
+        """Convert a token type to a token.
+
+        This method does the work of turning a token type into a token.
+        The supplied token parameter is a type of token that can be
+        filled in instead of allocating a new token."""
+
     def get_token(self, token_type, token=None):
         """Return the current token in the input stream.
 
@@ -231,9 +251,16 @@ class GeneratesTokens(Iterable, metaclass=abc.ABCMeta):
         :return: The current token in the input stream
         :rtype: minim.tokens.Token
         """
+        if token_type.is_token:
+            # The iterator is permitted to return a token for next()
+            # rather than a token_type.  In this case, just return the
+            # token again.
+            return token_type
+        else:
+            return self.token_type_to_token(token_type, token)
 
 
-class YieldBasedTokenGenerator(GeneratesTokens):
+class SendBasedTokenGenerator(GeneratesTokens):
 
     """An iterable that yields token types, and responds to send()
     with the token matching the token type."""
@@ -252,26 +279,24 @@ class YieldBasedTokenGenerator(GeneratesTokens):
     def next(self):
         return next(self.generator)
 
-    def get_token(self, token_type, token=None):
-        """Implementation of get_token that uses send() to the generator."""
-        if token_type.is_token:
-            # The iterator is permitted to return a token for next()
-            # rather than a token_type.  In this case, just return the
-            # token again.
-            return token_type
+    def token_type_to_token(self, token_type, token):
+        if token is None:
+            return self.generator.send(token_type)
         else:
-            if token is None:
-                return self.generator.send(token_type)
-            else:
-                return self.generator.send(token)
+            return self.generator.send(token)
 
 
-class StateBasedTokenGenerator(GeneratesTokens):
+class BufferBasedTokenGenerator(GeneratesTokens):
 
     """An iterable that yields token types, and uses buffer state to
-    return the token matching the token type."""
+    return the token matching the token type.
 
-    def __init__(self):
+    This is slightly faster than using send() but can only handle the
+    case where a token type is instantiated by calling the token type
+    with a saved buffer"""
+
+    def __init__(self, buf):
+        self.buf = buf
         self.generator = None
 
     def __iter__(self):
@@ -285,22 +310,15 @@ class StateBasedTokenGenerator(GeneratesTokens):
     def next(self):
         return next(self.generator)
 
-    def get_token(self, token_type, token=None):
-        """Implementation of get_token that uses send() to the generator."""
-        if token_type.is_token:
-            # The iterator is permitted to return a token for next()
-            # rather than a token_type.  In this case, just return the
-            # token again.
-            return token_type
-        else:
-            # XXX - doesn't use token
-            return token_type(self.buf.extract())
+    def token_type_to_token(self, token_type, token):
+        # XXX - doesn't use token
+        return token_type(self.buf.extract())
 
 
-class TokenGenerator(StateBasedTokenGenerator):
+class TokenGenerator(BufferBasedTokenGenerator):
 
     def __init__(self, buf):
-        self.buf = buf
+        super().__init__(buf)
         self.generator = None
         self.parse_name = NameParser()
         self.parse_space = WhitespaceParser()
