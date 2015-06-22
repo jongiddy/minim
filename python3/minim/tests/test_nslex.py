@@ -217,3 +217,23 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         token = scanner.get_token(token_type)
         self.assertEqual(token.prefix, 'foo')
         self.assertEqual(token.namespace, 'bar')
+
+    def test_namespace_values_split_name(self):
+        xml = ['<tag xmlns:fo', 'o="bar">']
+        scanner = nslex.TokenGenerator.from_strings(xml)
+        token_types = iter(scanner)
+        token_type = next(token_types)
+        self.assertTrue(token_type.is_a(nslex.NamespaceOpen))
+        token = scanner.get_token(token_type)
+        self.assertEqual(token.prefix, 'foo')
+        self.assertEqual(token.namespace, 'bar')
+
+    def test_namespace_values_split_url(self):
+        xml = ['<tag xmlns:foo="b', 'ar">']
+        scanner = nslex.TokenGenerator.from_strings(xml)
+        token_types = iter(scanner)
+        token_type = next(token_types)
+        self.assertTrue(token_type.is_a(nslex.NamespaceOpen))
+        token = scanner.get_token(token_type)
+        self.assertEqual(token.prefix, 'foo')
+        self.assertEqual(token.namespace, 'bar')
