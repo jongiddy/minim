@@ -315,10 +315,11 @@ class BufferBasedTokenGenerator(GeneratesTokens):
         return token_type(self.buf.extract())
 
 
-class TokenGenerator(BufferBasedTokenGenerator):
+class TokenGenerator(SendBasedTokenGenerator):
 
     def __init__(self, buf):
-        super().__init__(buf)
+        super().__init__()
+        self.buf = buf
         self.generator = None
         self.parse_name = NameParser()
         self.parse_space = WhitespaceParser()
