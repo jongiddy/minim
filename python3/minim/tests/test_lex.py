@@ -3,12 +3,12 @@ import unittest
 from minim import iterseq, lex, tokens
 
 
-class NameParserTests(unittest.TestCase):
+class NmTokenParserTests(unittest.TestCase):
 
-    def test_parser_matches_name(self):
+    def test_parser_matches_initial(self):
         s = 'foo '
         buf = iterseq.IterableAsSequence([s])
-        parse_name = lex.NameParser()
+        parse_name = lex.NmTokenParser()
         parse_name(buf, tokens.TagName)
         parse_name = iter(parse_name)
         self.assertIs(next(parse_name), tokens.TagName)
@@ -19,10 +19,10 @@ class NameParserTests(unittest.TestCase):
         # Test that StopIteration indicates found is True
         self.assertIs(stop.exception.value, True)
 
-    def test_parser_matches_name_eof(self):
+    def test_parser_matches_initial_eof(self):
         s = 'foo'
         buf = iterseq.IterableAsSequence([s])
-        parse_name = lex.NameParser()
+        parse_name = lex.NmTokenParser()
         parse_name(buf, tokens.TagName)
         parse_name = iter(parse_name)
         self.assertIs(next(parse_name), tokens.TagName)
@@ -40,22 +40,11 @@ class NameParserTests(unittest.TestCase):
         # Test that StopIteration indicates found is True
         self.assertIs(stop.exception.value, True)
 
-    def test_parser_fails_with_dot(self):
-        s = '.foo'
-        buf = iterseq.IterableAsSequence([s])
-        parse_name = lex.NameParser()
-        parse_name(buf, tokens.TagName)
-        parse_name = iter(parse_name)
-        with self.assertRaises(StopIteration) as stop:
-            next(parse_name)
-        # Test that StopIteration indicates found is False
-        self.assertIs(stop.exception.value, False)
-
     def test_parser_ok_with_nonfirst_on_next_start(self):
         # valid name, but invalid first char on buffer boundary
         s = ['foo', '-bar>']
         buf = iterseq.IterableAsSequence(s)
-        parse_name = lex.NameParser()
+        parse_name = lex.NmTokenParser()
         parse_name(buf, tokens.TagName)
         parse_name = iter(parse_name)
         self.assertIs(next(parse_name), tokens.TagName)
@@ -71,32 +60,39 @@ class NameParserTests(unittest.TestCase):
         self.assertEqual(buf.get(), '>')
 
     def test_letters_are_names(self):
-        parse_name = lex.NameParser()
+        parse_name = lex.NmTokenParser()
         chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-        self.assertIs(parse_name.matches_name(chars), True)
+        self.assertIs(parse_name.matches_initial(chars), True)
         for char in chars:
-            self.assertIs(parse_name.matches_name(char), True, repr(char))
+            self.assertIs(parse_name.matches_initial(char), True, repr(char))
 
     def test_spaces_are_not_names(self):
-        parse_name = lex.NameParser()
+        parse_name = lex.NmTokenParser()
         chars = ' \t\n\f\v'
-        self.assertIs(parse_name.matches_name(chars), False)
+        self.assertIs(parse_name.matches_initial(chars), False)
         for char in chars:
-            self.assertIs(parse_name.matches_name(char), False, repr(char))
+            self.assertIs(parse_name.matches_initial(char), False, repr(char))
 
     def test_symbols_are_not_names(self):
-        parse_name = lex.NameParser()
-        chars = ' !"£$%^&*()-+=~#@<>&?,.'
-        self.assertIs(parse_name.matches_name(chars), False)
+        parse_name = lex.NmTokenParser()
+        chars = '!"£$%^&*()-+=~#@<>&?,.'
+        self.assertIs(parse_name.matches_initial(chars), False)
         for char in chars:
-            self.assertIs(parse_name.matches_name(char), False, repr(char))
+            self.assertIs(parse_name.matches_initial(char), False, repr(char))
+
+    def test_some_symbols_are_names(self):
+        parse_name = lex.NmTokenParser()
+        chars = '_:'
+        self.assertIs(parse_name.matches_initial(chars), True)
+        for char in chars:
+            self.assertIs(parse_name.matches_initial(char), True, repr(char))
 
     def test_numbers_are_not_names(self):
-        parse_name = lex.NameParser()
+        parse_name = lex.NmTokenParser()
         chars = '0123456789'
-        self.assertIs(parse_name.matches_name(chars), False)
+        self.assertIs(parse_name.matches_initial(chars), False)
         for char in chars:
-            self.assertIs(parse_name.matches_name(char), False, repr(char))
+            self.assertIs(parse_name.matches_initial(char), False, repr(char))
 
 
 class WhitespaceParserTests(unittest.TestCase):

@@ -177,29 +177,27 @@ class WhitespaceParser(PatternParser):
         super().__init__(self.pattern)
 
 
-class NameParser(PatternParser):
+class NmTokenParser(PatternParser):
 
-    allowed = r'\w:.-'
-    invalid_initial = re.compile(r'[\d.-]')
-    pattern = re.compile('[{}]+'.format(allowed))
+    """Parse an XML NmToken.
+
+    XML defines an NmToken, which is a sequence of alphanumeric
+    characters plus underscore (_), colon (:), dot (.), and dash (-).
+    XML also defines a Name, which is an NmToken where the initial
+    character is not a number, dot, or dash.  This parser matches
+    NmTokens.  A helper function is provided to check whether the
+    initial character is valid for a name. This should always be called
+    on the initial string first when parsing a name.
+    """
+    name_initial_pattern = re.compile(r':|[^\W\d]')
+    nm_token_pattern = re.compile(r'[\w:.-]+')
 
     def __init__(self):
-        super().__init__(self.pattern)
+        super().__init__(self.nm_token_pattern)
 
-    def __next__(self):
-        if (not self.found and
-                self.buf.matching(self.invalid_initial, extract=False)):
-            # initial character might match pattern, but is disallowed
-            # as initial name character, so exit here.
-            self.stopped = _stop_iteration_not_found
-            raise self.stopped
-        return super().__next__()
-
-    def matches_name(self, s):
+    def matches_initial(self, s):
         """Return whether the start of the string looks like a name."""
-        return (
-            not self.invalid_initial.match(s) and
-            bool(self.pattern.match(s[:1])))
+        return bool(self.name_initial_pattern.match(s))
 
 
 class GeneratesTokens(Iterable, metaclass=abc.ABCMeta):
@@ -321,7 +319,7 @@ class TokenGenerator(SendBasedTokenGenerator):
         super().__init__()
         self.buf = buf
         self.generator = None
-        self.parse_name = NameParser()
+        self.parse_name = NmTokenParser()
         self.parse_space = WhitespaceParser()
         self.parse_until = SentinelParser()
 
@@ -342,7 +340,7 @@ class TokenGenerator(SendBasedTokenGenerator):
             ch = buf.next()
             if ch == '/':
                 ch = buf.next()
-                if self.parse_name.matches_name(ch):
+                if self.parse_name.matches_initial(ch):
                     yield tokens.EndTagOpenToken
                     yield from self.parse_name(buf, tokens.TagName)
                     yield from self.parse_space(buf, tokens.MarkupWhitespace)
@@ -359,7 +357,7 @@ class TokenGenerator(SendBasedTokenGenerator):
                     yield tokens.PCData(literal='/')
             elif ch == '?':
                 ch = buf.next()
-                if self.parse_name.matches_name(ch):
+                if self.parse_name.matches_initial(ch):
                     yield tokens.ProcessingInstructionOpenToken
                     yield from self.parse_name(
                         buf, tokens.ProcessingInstructionTarget)
@@ -426,7 +424,7 @@ class TokenGenerator(SendBasedTokenGenerator):
                 else:
                     yield tokens.BadlyFormedLessThanToken
                     yield tokens.PCData(literal='!')
-            elif self.parse_name.matches_name(ch):
+            elif self.parse_name.matches_initial(ch):
                 yield tokens.StartOrEmptyTagOpenToken
                 if not (yield from self.parse_name(buf, tokens.TagName)):
                     raise RuntimeError('Expected tag name')
@@ -437,9 +435,9 @@ class TokenGenerator(SendBasedTokenGenerator):
                     if not ws_found:
                         raise RuntimeError(
                             'Expected whitespace, >, or />, found %r' % ch)
-                    if not (yield from self.parse_name(
-                            buf, tokens.AttributeName)):
+                    if not self.parse_name.matches_initial(ch):
                         raise RuntimeError('Expected attribute name')
+                    yield from self.parse_name(buf, tokens.AttributeName)
                     yield from self.parse_space(buf, tokens.MarkupWhitespace)
                     ch = buf.get()
                     if ch == '=':
