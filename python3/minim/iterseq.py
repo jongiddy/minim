@@ -76,10 +76,7 @@ class IterableAsSequence:
             return None
         start = self._start
         current = self._current
-        if start == 0 and current == len(buf):
-            return buf
-        else:
-            return buf[start:current]
+        return buf[start:current]
 
     def matching(self, pat, extract=True):
         """
