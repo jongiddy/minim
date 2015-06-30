@@ -289,12 +289,12 @@ class BufferBasedTokenGenerator(GeneratesTokens):
     """An iterable that yields token types, and uses buffer state to
     return the token matching the token type.
 
-    This is slightly faster than using send() but can only handle the
-    case where a token type is instantiated by calling the token type
-    with a saved buffer"""
+    This can only handle the case where a token type is instantiated by
+    calling the token type with a saved buffer.
+    """
 
-    def __init__(self, buf):
-        self.buf = buf
+    def __init__(self):
+        self.current_parser = None
         self.generator = None
 
     def __iter__(self):
@@ -309,19 +309,33 @@ class BufferBasedTokenGenerator(GeneratesTokens):
         return next(self.generator)
 
     def token_type_to_token(self, token_type, token):
-        # XXX - doesn't use token
-        return token_type(self.buf.extract())
+        if token is None:
+            return self.current_parser.send(token_type)
+        else:
+            return self.current_parser.send(token)
 
 
-class TokenGenerator(SendBasedTokenGenerator):
+class TokenGenerator(BufferBasedTokenGenerator):
 
     def __init__(self, buf):
         super().__init__()
         self.buf = buf
         self.generator = None
-        self.parse_name = NmTokenParser()
-        self.parse_space = WhitespaceParser()
-        self.parse_until = SentinelParser()
+        self.name_parser = NmTokenParser()
+        self.space_parser = WhitespaceParser()
+        self.sentinel_parser = SentinelParser()
+
+    def parse_name(self, buf, token_type):
+        self.current_parser = self.name_parser
+        return self.name_parser(buf, token_type)
+
+    def parse_space(self, buf, token_type):
+        self.current_parser = self.space_parser
+        return self.space_parser(buf, token_type)
+
+    def parse_until(self, buf, token_type, sentinel):
+        self.current_parser = self.sentinel_parser
+        return self.sentinel_parser(buf, token_type, sentinel)
 
     @classmethod
     def from_strings(cls, string_iter):
@@ -340,7 +354,7 @@ class TokenGenerator(SendBasedTokenGenerator):
             ch = buf.next()
             if ch == '/':
                 ch = buf.next()
-                if self.parse_name.matches_initial(ch):
+                if self.name_parser.matches_initial(ch):
                     yield tokens.EndTagOpenToken
                     yield from self.parse_name(buf, tokens.TagName)
                     yield from self.parse_space(buf, tokens.MarkupWhitespace)
@@ -357,7 +371,7 @@ class TokenGenerator(SendBasedTokenGenerator):
                     yield tokens.PCData(literal='/')
             elif ch == '?':
                 ch = buf.next()
-                if self.parse_name.matches_initial(ch):
+                if self.name_parser.matches_initial(ch):
                     yield tokens.ProcessingInstructionOpenToken
                     yield from self.parse_name(
                         buf, tokens.ProcessingInstructionTarget)
@@ -424,7 +438,7 @@ class TokenGenerator(SendBasedTokenGenerator):
                 else:
                     yield tokens.BadlyFormedLessThanToken
                     yield tokens.PCData(literal='!')
-            elif self.parse_name.matches_initial(ch):
+            elif self.name_parser.matches_initial(ch):
                 yield tokens.StartOrEmptyTagOpenToken
                 if not (yield from self.parse_name(buf, tokens.TagName)):
                     raise RuntimeError('Expected tag name')
@@ -435,7 +449,7 @@ class TokenGenerator(SendBasedTokenGenerator):
                     if not ws_found:
                         raise RuntimeError(
                             'Expected whitespace, >, or />, found %r' % ch)
-                    if not self.parse_name.matches_initial(ch):
+                    if not self.name_parser.matches_initial(ch):
                         raise RuntimeError('Expected attribute name')
                     yield from self.parse_name(buf, tokens.AttributeName)
                     yield from self.parse_space(buf, tokens.MarkupWhitespace)
