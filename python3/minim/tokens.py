@@ -163,122 +163,112 @@ class CommentData(Markup):
     is_data = True
 
 
-class SingletonMarkup(Markup):
-
-    """A token that always has the same representation."""
-
+class StartOrEmptyTagOpen(Markup):
     is_structure = True
 
-    def set(self, **kw):
-        raise ImmutableTokenException('Immutable token cannot be modified')
+StartOrEmptyTagOpenToken = StartOrEmptyTagOpen('<')
 
 
-class StartOrEmptyTagOpen(SingletonMarkup):
-    literal = '<'
+class EndTagOpen(Markup):
+    is_structure = True
 
-StartOrEmptyTagOpenToken = StartOrEmptyTagOpen()
-
-
-class EndTagOpen(SingletonMarkup):
-    literal = '</'
-
-EndTagOpenToken = EndTagOpen()
+EndTagOpenToken = EndTagOpen('</')
 
 
-class AttributeEquals(SingletonMarkup):
-    literal = '='
+class AttributeEquals(Markup):
+    is_structure = True
 
-AttributeEqualsToken = AttributeEquals()
+AttributeEqualsToken = AttributeEquals('=')
 
 
-class AttributeValueOpen(SingletonMarkup):
+class AttributeValueOpen(Markup):
     pass
 
 
 class AttributeValueDoubleOpen(AttributeValueOpen):
-    literal = '"'
+    is_structure = True
 
-AttributeValueDoubleOpenToken = AttributeValueDoubleOpen()
+AttributeValueDoubleOpenToken = AttributeValueDoubleOpen('"')
 
 
 class AttributeValueSingleOpen(AttributeValueOpen):
-    literal = "'"
+    is_structure = True
 
-AttributeValueSingleOpenToken = AttributeValueSingleOpen()
+AttributeValueSingleOpenToken = AttributeValueSingleOpen("'")
 
 
-class AttributeValueClose(SingletonMarkup):
+class AttributeValueClose(Markup):
     pass
 
 
 class AttributeValueDoubleClose(AttributeValueClose):
-    literal = '"'
+    is_structure = True
 
-AttributeValueDoubleCloseToken = AttributeValueDoubleClose()
+AttributeValueDoubleCloseToken = AttributeValueDoubleClose('"')
 
 
 class AttributeValueSingleClose(AttributeValueClose):
-    literal = "'"
+    is_structure = True
 
-AttributeValueSingleCloseToken = AttributeValueSingleClose()
+AttributeValueSingleCloseToken = AttributeValueSingleClose("'")
 
 
-class StartOrEmptyTagClose(SingletonMarkup):
+class StartOrEmptyTagClose(Markup):
     pass
 
 
 class StartTagClose(StartOrEmptyTagClose):
-    literal = '>'
+    is_structure = True
 
-StartTagCloseToken = StartTagClose()
+StartTagCloseToken = StartTagClose('>')
 
 
 class EmptyTagClose(StartOrEmptyTagClose):
-    literal = '/>'
+    is_structure = True
 
-EmptyTagCloseToken = EmptyTagClose()
-
-
-class EndTagClose(SingletonMarkup):
-    literal = '>'
-
-EndTagCloseToken = EndTagClose()
+EmptyTagCloseToken = EmptyTagClose('/>')
 
 
-class ProcessingInstructionOpen(SingletonMarkup):
-    literal = '<?'
+class EndTagClose(Markup):
+    is_structure = True
 
-ProcessingInstructionOpenToken = ProcessingInstructionOpen()
-
-
-class ProcessingInstructionClose(SingletonMarkup):
-    literal = '?>'
-
-ProcessingInstructionCloseToken = ProcessingInstructionClose()
+EndTagCloseToken = EndTagClose('>')
 
 
-class CommentOpen(SingletonMarkup):
-    literal = '<!--'
+class ProcessingInstructionOpen(Markup):
+    is_structure = True
 
-CommentOpenToken = CommentOpen()
-
-
-class CommentClose(SingletonMarkup):
-    literal = '-->'
-
-CommentCloseToken = CommentClose()
+ProcessingInstructionOpenToken = ProcessingInstructionOpen('<?')
 
 
-class CDataOpen(SingletonMarkup):
-    literal = '<![CDATA['
+class ProcessingInstructionClose(Markup):
+    is_structure = True
 
-CDataOpenToken = CDataOpen()
+ProcessingInstructionCloseToken = ProcessingInstructionClose('?>')
 
 
-class CDataClose(SingletonMarkup):
-    literal = ']]>'
+class CommentOpen(Markup):
+    is_structure = True
 
-CDataCloseToken = CDataClose()
+CommentOpenToken = CommentOpen('<!--')
+
+
+class CommentClose(Markup):
+    is_structure = True
+
+CommentCloseToken = CommentClose('-->')
+
+
+class CDataOpen(Markup):
+    is_structure = True
+
+CDataOpenToken = CDataOpen('<![CDATA[')
+
+
+class CDataClose(Markup):
+    is_structure = True
+
+CDataCloseToken = CDataClose(']]>')
 
 
 class BadlyFormedEndOfStream(Markup):
