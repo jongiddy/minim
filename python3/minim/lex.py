@@ -24,6 +24,23 @@ _stop_iteration = StopIteration()
 _stop_iteration_found = StopIteration(True)
 _stop_iteration_not_found = StopIteration(False)
 
+StartOrEmptyTagOpenToken = tokens.StartOrEmptyTagOpen('<')
+EndTagOpenToken = tokens.EndTagOpen('</')
+AttributeEqualsToken = tokens.AttributeEquals('=')
+AttributeValueDoubleOpenToken = tokens.AttributeValueDoubleOpen('"')
+AttributeValueSingleOpenToken = tokens.AttributeValueSingleOpen("'")
+AttributeValueDoubleCloseToken = tokens.AttributeValueDoubleClose('"')
+AttributeValueSingleCloseToken = tokens.AttributeValueSingleClose("'")
+StartTagCloseToken = tokens.StartTagClose('>')
+EmptyTagCloseToken = tokens.EmptyTagClose('/>')
+EndTagCloseToken = tokens.EndTagClose('>')
+ProcessingInstructionOpenToken = tokens.ProcessingInstructionOpen('<?')
+ProcessingInstructionCloseToken = tokens.ProcessingInstructionClose('?>')
+CommentOpenToken = tokens.CommentOpen('<!--')
+CommentCloseToken = tokens.CommentClose('-->')
+CDataOpenToken = tokens.CDataOpen('<![CDATA[')
+CDataCloseToken = tokens.CDataClose(']]>')
+
 
 class SentinelParser(Iterator):
 
@@ -355,7 +372,7 @@ class TokenGenerator(BufferBasedTokenGenerator):
             if ch == '/':
                 ch = buf.next()
                 if self.name_parser.matches_initial(ch):
-                    yield tokens.EndTagOpenToken
+                    yield EndTagOpenToken
                     yield from self.parse_name(buf, tokens.TagName)
                     yield from self.parse_space(buf, tokens.MarkupWhitespace)
                     ch = buf.get()
@@ -364,7 +381,7 @@ class TokenGenerator(BufferBasedTokenGenerator):
                         return
                     elif ch != '>':
                         raise RuntimeError('extra data in close tag')
-                    yield tokens.EndTagCloseToken
+                    yield EndTagCloseToken
                     buf.advance()
                 else:
                     yield tokens.BadlyFormedLessThanToken
@@ -372,7 +389,7 @@ class TokenGenerator(BufferBasedTokenGenerator):
             elif ch == '?':
                 ch = buf.next()
                 if self.name_parser.matches_initial(ch):
-                    yield tokens.ProcessingInstructionOpenToken
+                    yield ProcessingInstructionOpenToken
                     yield from self.parse_name(
                         buf, tokens.ProcessingInstructionTarget)
                     ws_found = yield from self.parse_space(
@@ -397,7 +414,7 @@ class TokenGenerator(BufferBasedTokenGenerator):
                         if not buf.starts_with('?>'):
                             raise RuntimeError(
                                 'Expected ?>, got %r' % buf.get())
-                    yield tokens.ProcessingInstructionCloseToken
+                    yield ProcessingInstructionCloseToken
                 else:
                     yield tokens.BadlyFormedLessThanToken
                     yield tokens.PCData(literal='?')
@@ -406,14 +423,14 @@ class TokenGenerator(BufferBasedTokenGenerator):
                 if ch == '-':
                     ch = buf.next()
                     if ch == '-':
-                        yield tokens.CommentOpenToken
+                        yield CommentOpenToken
                         buf.advance()
                         yield from self.parse_until(
                             buf, tokens.CommentData, '-->')
                         if not buf.starts_with('-->'):
                             yield tokens.BadlyFormedEndOfStream()
                             return
-                        yield tokens.CommentCloseToken
+                        yield CommentCloseToken
                     else:
                         # < does not appear to be well-formed markup - emit a
                         # literal <
@@ -422,7 +439,7 @@ class TokenGenerator(BufferBasedTokenGenerator):
                 elif ch == '[':
                     buf.advance()
                     if buf.starts_with('CDATA['):
-                        yield tokens.CDataOpenToken
+                        yield CDataOpenToken
                         found = yield from self.parse_until(
                             buf, tokens.CData, ']]>')
                         if not buf.starts_with(']]>'):
@@ -430,7 +447,7 @@ class TokenGenerator(BufferBasedTokenGenerator):
                             assert not buf.get(), buf.get()
                             yield tokens.BadlyFormedEndOfStream()
                             return
-                        yield tokens.CDataCloseToken
+                        yield CDataCloseToken
                     else:
                         # declaration
                         raise NotImplementedError(
@@ -439,7 +456,7 @@ class TokenGenerator(BufferBasedTokenGenerator):
                     yield tokens.BadlyFormedLessThanToken
                     yield tokens.PCData(literal='!')
             elif self.name_parser.matches_initial(ch):
-                yield tokens.StartOrEmptyTagOpenToken
+                yield StartOrEmptyTagOpenToken
                 if not (yield from self.parse_name(buf, tokens.TagName)):
                     raise RuntimeError('Expected tag name')
                 ws_found = yield from self.parse_space(
@@ -455,7 +472,7 @@ class TokenGenerator(BufferBasedTokenGenerator):
                     yield from self.parse_space(buf, tokens.MarkupWhitespace)
                     ch = buf.get()
                     if ch == '=':
-                        yield tokens.AttributeEqualsToken
+                        yield AttributeEqualsToken
                         buf.advance()
                         yield from self.parse_space(
                             buf, tokens.MarkupWhitespace)
@@ -465,9 +482,9 @@ class TokenGenerator(BufferBasedTokenGenerator):
                             return
                         if ch in ('"', "'"):
                             if ch == '"':
-                                yield tokens.AttributeValueDoubleOpenToken
+                                yield AttributeValueDoubleOpenToken
                             else:
-                                yield tokens.AttributeValueSingleOpenToken
+                                yield AttributeValueSingleOpenToken
                             buf.advance()
                             yield from self.parse_until(
                                 buf, tokens.AttributeValue, ch)
@@ -475,9 +492,9 @@ class TokenGenerator(BufferBasedTokenGenerator):
                                 yield tokens.BadlyFormedEndOfStream()
                                 return
                             if ch == '"':
-                                yield tokens.AttributeValueDoubleCloseToken
+                                yield AttributeValueDoubleCloseToken
                             else:
-                                yield tokens.AttributeValueSingleCloseToken
+                                yield AttributeValueSingleCloseToken
                         else:
                             # HTML fallback - need a parser to read un-quoted
                             # attribute
@@ -489,7 +506,7 @@ class TokenGenerator(BufferBasedTokenGenerator):
                     yield tokens.BadlyFormedEndOfStream()
                     return
                 elif ch == '>':
-                    yield tokens.StartTagCloseToken
+                    yield StartTagCloseToken
                     buf.advance()
                 else:
                     assert ch == '/'
@@ -499,7 +516,7 @@ class TokenGenerator(BufferBasedTokenGenerator):
                         return
                     elif ch != '>':
                         raise RuntimeError('Expected />')
-                    yield tokens.EmptyTagCloseToken
+                    yield EmptyTagCloseToken
                     buf.advance()
             else:
                 # < does not appear to be well-formed markup - treat it

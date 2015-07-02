@@ -41,5 +41,5 @@ class TestContent(unittest.TestCase):
         self.assertFalse(token_type.is_a(tokens.Content))
 
     def test_markup_token_is_not_a_content(self):
-        token_type = tokens.StartTagCloseToken
+        token_type = tokens.StartTagClose
         self.assertFalse(token_type.is_a(tokens.Content))

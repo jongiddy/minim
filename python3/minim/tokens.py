@@ -166,19 +166,13 @@ class CommentData(Markup):
 class StartOrEmptyTagOpen(Markup):
     is_structure = True
 
-StartOrEmptyTagOpenToken = StartOrEmptyTagOpen('<')
-
 
 class EndTagOpen(Markup):
     is_structure = True
 
-EndTagOpenToken = EndTagOpen('</')
-
 
 class AttributeEquals(Markup):
     is_structure = True
-
-AttributeEqualsToken = AttributeEquals('=')
 
 
 class AttributeValueOpen(Markup):
@@ -188,13 +182,9 @@ class AttributeValueOpen(Markup):
 class AttributeValueDoubleOpen(AttributeValueOpen):
     is_structure = True
 
-AttributeValueDoubleOpenToken = AttributeValueDoubleOpen('"')
-
 
 class AttributeValueSingleOpen(AttributeValueOpen):
     is_structure = True
-
-AttributeValueSingleOpenToken = AttributeValueSingleOpen("'")
 
 
 class AttributeValueClose(Markup):
@@ -204,13 +194,9 @@ class AttributeValueClose(Markup):
 class AttributeValueDoubleClose(AttributeValueClose):
     is_structure = True
 
-AttributeValueDoubleCloseToken = AttributeValueDoubleClose('"')
-
 
 class AttributeValueSingleClose(AttributeValueClose):
     is_structure = True
-
-AttributeValueSingleCloseToken = AttributeValueSingleClose("'")
 
 
 class StartOrEmptyTagClose(Markup):
@@ -220,55 +206,37 @@ class StartOrEmptyTagClose(Markup):
 class StartTagClose(StartOrEmptyTagClose):
     is_structure = True
 
-StartTagCloseToken = StartTagClose('>')
-
 
 class EmptyTagClose(StartOrEmptyTagClose):
     is_structure = True
-
-EmptyTagCloseToken = EmptyTagClose('/>')
 
 
 class EndTagClose(Markup):
     is_structure = True
 
-EndTagCloseToken = EndTagClose('>')
-
 
 class ProcessingInstructionOpen(Markup):
     is_structure = True
-
-ProcessingInstructionOpenToken = ProcessingInstructionOpen('<?')
 
 
 class ProcessingInstructionClose(Markup):
     is_structure = True
 
-ProcessingInstructionCloseToken = ProcessingInstructionClose('?>')
-
 
 class CommentOpen(Markup):
     is_structure = True
-
-CommentOpenToken = CommentOpen('<!--')
 
 
 class CommentClose(Markup):
     is_structure = True
 
-CommentCloseToken = CommentClose('-->')
-
 
 class CDataOpen(Markup):
     is_structure = True
 
-CDataOpenToken = CDataOpen('<![CDATA[')
-
 
 class CDataClose(Markup):
     is_structure = True
-
-CDataCloseToken = CDataClose(']]>')
 
 
 class BadlyFormedEndOfStream(Markup):

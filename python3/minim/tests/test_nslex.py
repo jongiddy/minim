@@ -32,28 +32,28 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         xml = '<ttns:tag foo="bar" xmlns:ttns="http://url.example.com/">'
         expected_tokens = [
             (nslex.NamespaceOpen, ''),
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ttns:tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'foo'),
-            (tokens.AttributeEqualsToken, '='),
-            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeEquals, '='),
+            (tokens.AttributeValueDoubleOpen, '"'),
             (tokens.AttributeValue, 'bar'),
-            (tokens.AttributeValueDoubleCloseToken, '"'),
+            (tokens.AttributeValueDoubleClose, '"'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'xmlns:ttns'),
-            (tokens.AttributeEqualsToken, '='),
-            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeEquals, '='),
+            (tokens.AttributeValueDoubleOpen, '"'),
             (tokens.AttributeValue, 'http://url.example.com/'),
-            (tokens.AttributeValueDoubleCloseToken, '"'),
-            (tokens.StartTagCloseToken, '>')
+            (tokens.AttributeValueDoubleClose, '"'),
+            (tokens.StartTagClose, '>')
             ]
         self.scan([xml], expected_tokens)
 
     def test_short_start_tag(self):
         xml = '<ns:tag'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ns:tag'),
             (tokens.TagName, ''),
             (tokens.BadlyFormedEndOfStream, '')
@@ -63,7 +63,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_start_tag_space(self):
         xml = '<ns:tag '
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ns:tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.MarkupWhitespace, ''),
@@ -74,7 +74,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_start_tag_space_attr(self):
         xml = '<ns:tag xmlns:ns'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ns:tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'xmlns:ns'),
@@ -86,11 +86,11 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_start_tag_space_attr_equals(self):
         xml = '<ns:tag xmlns:ns='
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ns:tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'xmlns:ns'),
-            (tokens.AttributeEqualsToken, '='),
+            (tokens.AttributeEquals, '='),
             (tokens.BadlyFormedEndOfStream, '')
             ]
         self.scan([xml], expected_tokens)
@@ -98,12 +98,12 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_start_tag_space_attr_equals_quote(self):
         xml = '<ns:tag xmlns:ns="'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ns:tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'xmlns:ns'),
-            (tokens.AttributeEqualsToken, '='),
-            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeEquals, '='),
+            (tokens.AttributeValueDoubleOpen, '"'),
             (tokens.BadlyFormedEndOfStream, '')
             ]
         self.scan([xml], expected_tokens)
@@ -111,12 +111,12 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_start_tag_space_attr_equals_quote_value(self):
         xml = '<ns:tag xmlns:ns="http://url.example.com/'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ns:tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'xmlns:ns'),
-            (tokens.AttributeEqualsToken, '='),
-            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeEquals, '='),
+            (tokens.AttributeValueDoubleOpen, '"'),
             (tokens.AttributeValue, 'http://url.example.com/'),
             (tokens.AttributeValue, ''),
             (tokens.BadlyFormedEndOfStream, '')
@@ -127,14 +127,14 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         xml = '<ns:tag xmlns:ns="http://url.example.com/"'
         expected_tokens = [
             (nslex.NamespaceOpen, ''),
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ns:tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'xmlns:ns'),
-            (tokens.AttributeEqualsToken, '='),
-            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeEquals, '='),
+            (tokens.AttributeValueDoubleOpen, '"'),
             (tokens.AttributeValue, 'http://url.example.com/'),
-            (tokens.AttributeValueDoubleCloseToken, '"'),
+            (tokens.AttributeValueDoubleClose, '"'),
             (tokens.BadlyFormedEndOfStream, '')
             ]
         self.scan([xml], expected_tokens)
@@ -143,14 +143,14 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         xml = '<ns:tag xmlns:ns="http://url.example.com/" /'
         expected_tokens = [
             (nslex.NamespaceOpen, ''),
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ns:tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'xmlns:ns'),
-            (tokens.AttributeEqualsToken, '='),
-            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeEquals, '='),
+            (tokens.AttributeValueDoubleOpen, '"'),
             (tokens.AttributeValue, 'http://url.example.com/'),
-            (tokens.AttributeValueDoubleCloseToken, '"'),
+            (tokens.AttributeValueDoubleClose, '"'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.BadlyFormedEndOfStream, '/')
             ]
@@ -168,18 +168,18 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         xml = "some content<tag>"
         expected_tokens = [
             (tokens.PCData, 'some content'),
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
-            (tokens.StartTagCloseToken, '>')
+            (tokens.StartTagClose, '>')
             ]
         self.scan([xml], expected_tokens)
 
     def test_markup_content(self):
         xml = "<tag>some content"
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
-            (tokens.StartTagCloseToken, '>'),
+            (tokens.StartTagClose, '>'),
             (tokens.PCData, 'some content'),
             (tokens.PCData, ''),
             ]

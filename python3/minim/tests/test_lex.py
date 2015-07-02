@@ -260,22 +260,22 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_start_tag(self):
         xml = '<tag foo="bar">'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'foo'),
-            (tokens.AttributeEqualsToken, '='),
-            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeEquals, '='),
+            (tokens.AttributeValueDoubleOpen, '"'),
             (tokens.AttributeValue, 'bar'),
-            (tokens.AttributeValueDoubleCloseToken, '"'),
-            (tokens.StartTagCloseToken, '>')
+            (tokens.AttributeValueDoubleClose, '"'),
+            (tokens.StartTagClose, '>')
             ]
         self.scan([xml], expected_tokens)
 
     def test_short_start_tag(self):
         xml = '<tag'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
             (tokens.BadlyFormedEndOfStream, '')
             ]
@@ -284,7 +284,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_start_tag_space(self):
         xml = '<tag '
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.BadlyFormedEndOfStream, '')
@@ -294,7 +294,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_start_tag_space_attr(self):
         xml = '<tag foo'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'foo'),
@@ -305,11 +305,11 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_start_tag_space_attr_equals(self):
         xml = '<tag foo='
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'foo'),
-            (tokens.AttributeEqualsToken, '='),
+            (tokens.AttributeEquals, '='),
             (tokens.BadlyFormedEndOfStream, '')
             ]
         self.scan([xml], expected_tokens)
@@ -317,12 +317,12 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_start_tag_space_attr_equals_quote(self):
         xml = '<tag foo="'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'foo'),
-            (tokens.AttributeEqualsToken, '='),
-            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeEquals, '='),
+            (tokens.AttributeValueDoubleOpen, '"'),
             (tokens.BadlyFormedEndOfStream, '')
             ]
         self.scan([xml], expected_tokens)
@@ -330,12 +330,12 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_start_tag_space_attr_equals_quote_value(self):
         xml = '<tag foo="bar'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'foo'),
-            (tokens.AttributeEqualsToken, '='),
-            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeEquals, '='),
+            (tokens.AttributeValueDoubleOpen, '"'),
             (tokens.AttributeValue, 'bar'),
             (tokens.BadlyFormedEndOfStream, '')
             ]
@@ -344,14 +344,14 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_start_tag_space_attribute(self):
         xml = '<tag foo="bar"'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'foo'),
-            (tokens.AttributeEqualsToken, '='),
-            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeEquals, '='),
+            (tokens.AttributeValueDoubleOpen, '"'),
             (tokens.AttributeValue, 'bar'),
-            (tokens.AttributeValueDoubleCloseToken, '"'),
+            (tokens.AttributeValueDoubleClose, '"'),
             (tokens.BadlyFormedEndOfStream, '')
             ]
         self.scan([xml], expected_tokens)
@@ -359,14 +359,14 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_empty_tag_space_attribute_slash(self):
         xml = '<tag foo="bar" /'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'foo'),
-            (tokens.AttributeEqualsToken, '='),
-            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeEquals, '='),
+            (tokens.AttributeValueDoubleOpen, '"'),
             (tokens.AttributeValue, 'bar'),
-            (tokens.AttributeValueDoubleCloseToken, '"'),
+            (tokens.AttributeValueDoubleClose, '"'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.BadlyFormedEndOfStream, '/')
             ]
@@ -375,9 +375,9 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_end_tag(self):
         xml = '</ns:tag>'
         expected_tokens = [
-            (tokens.EndTagOpenToken, '</'),
+            (tokens.EndTagOpen, '</'),
             (tokens.TagName, 'ns:tag'),
-            (tokens.EndTagCloseToken, '>')
+            (tokens.EndTagClose, '>')
             ]
         self.scan([xml], expected_tokens)
 
@@ -392,7 +392,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_end_tag_name(self):
         xml = '</foo'
         expected_tokens = [
-            (tokens.EndTagOpenToken, '</'),
+            (tokens.EndTagOpen, '</'),
             (tokens.TagName, 'foo'),
             (tokens.BadlyFormedEndOfStream, '')
             ]
@@ -401,40 +401,40 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_empty_tag(self):
         xml = '<tag\tfoo="bar"\n\t/>'
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
             (tokens.MarkupWhitespace, '\t'),
             (tokens.AttributeName, 'foo'),
-            (tokens.AttributeEqualsToken, '='),
-            (tokens.AttributeValueDoubleOpenToken, '"'),
+            (tokens.AttributeEquals, '='),
+            (tokens.AttributeValueDoubleOpen, '"'),
             (tokens.AttributeValue, 'bar'),
-            (tokens.AttributeValueDoubleCloseToken, '"'),
+            (tokens.AttributeValueDoubleClose, '"'),
             (tokens.MarkupWhitespace, '\n\t'),
-            (tokens.EmptyTagCloseToken, '/>')
+            (tokens.EmptyTagClose, '/>')
             ]
         self.scan([xml], expected_tokens)
 
     def test_cdata(self):
         xml = "<![CDATA[Some <non-markup> text & [] symbols]]>"
         expected_tokens = [
-            (tokens.CDataOpenToken, '<![CDATA['),
+            (tokens.CDataOpen, '<![CDATA['),
             (tokens.CData, 'Some <non-markup> text & [] symbols'),
-            (tokens.CDataCloseToken, ']]>')
+            (tokens.CDataClose, ']]>')
             ]
         self.scan([xml], expected_tokens)
 
     def test_empty_cdata(self):
         xml = "<![CDATA[]]>"
         expected_tokens = [
-            (tokens.CDataOpenToken, '<![CDATA['),
-            (tokens.CDataCloseToken, ']]>')
+            (tokens.CDataOpen, '<![CDATA['),
+            (tokens.CDataClose, ']]>')
             ]
         self.scan([xml], expected_tokens)
 
     def test_short_cdata(self):
         xml = "<![CDATA[Some <non-markup> text & []"
         expected_tokens = [
-            (tokens.CDataOpenToken, '<![CDATA['),
+            (tokens.CDataOpen, '<![CDATA['),
             (tokens.CData, 'Some <non-markup> text & []'),
             (tokens.BadlyFormedEndOfStream, '')
             ]
@@ -443,25 +443,25 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_comment(self):
         xml = "<!-- Lot's of text, including technically invalid -- -->"
         expected_tokens = [
-            (tokens.CommentOpenToken, '<!--'),
+            (tokens.CommentOpen, '<!--'),
             (tokens.CommentData,
                 " Lot's of text, including technically invalid -- "),
-            (tokens.CommentCloseToken, '-->')
+            (tokens.CommentClose, '-->')
             ]
         self.scan([xml], expected_tokens)
 
     def test_empty_comment(self):
         xml = "<!---->"
         expected_tokens = [
-            (tokens.CommentOpenToken, '<!--'),
-            (tokens.CommentCloseToken, '-->')
+            (tokens.CommentOpen, '<!--'),
+            (tokens.CommentClose, '-->')
             ]
         self.scan([xml], expected_tokens)
 
     def test_short_comment(self):
         xml = "<!--"
         expected_tokens = [
-            (tokens.CommentOpenToken, '<!--'),
+            (tokens.CommentOpen, '<!--'),
             (tokens.BadlyFormedEndOfStream, '')
             ]
         self.scan([xml], expected_tokens)
@@ -469,7 +469,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_comment_data(self):
         xml = "<!-- comment "
         expected_tokens = [
-            (tokens.CommentOpenToken, '<!--'),
+            (tokens.CommentOpen, '<!--'),
             (tokens.CommentData, ' comment '),
             (tokens.BadlyFormedEndOfStream, '')
             ]
@@ -494,20 +494,20 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_processing_instruction(self):
         xml = "<?xml foo bar?>"
         expected_tokens = [
-            (tokens.ProcessingInstructionOpenToken, '<?'),
+            (tokens.ProcessingInstructionOpen, '<?'),
             (tokens.ProcessingInstructionTarget, 'xml'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.ProcessingInstructionData, 'foo bar'),
-            (tokens.ProcessingInstructionCloseToken, '?>')
+            (tokens.ProcessingInstructionClose, '?>')
             ]
         self.scan([xml], expected_tokens)
 
     def test_empty_processing_instruction(self):
         xml = "<?xml?>"
         expected_tokens = [
-            (tokens.ProcessingInstructionOpenToken, '<?'),
+            (tokens.ProcessingInstructionOpen, '<?'),
             (tokens.ProcessingInstructionTarget, 'xml'),
-            (tokens.ProcessingInstructionCloseToken, '?>')
+            (tokens.ProcessingInstructionClose, '?>')
             ]
         self.scan([xml], expected_tokens)
 
@@ -522,7 +522,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_processing_instruction_name(self):
         xml = "<?xml"
         expected_tokens = [
-            (tokens.ProcessingInstructionOpenToken, '<?'),
+            (tokens.ProcessingInstructionOpen, '<?'),
             (tokens.ProcessingInstructionTarget, 'xml'),
             (tokens.BadlyFormedEndOfStream, '')
             ]
@@ -532,7 +532,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_processing_instruction_name_quest(self):
         xml = "<?xml?"
         expected_tokens = [
-            (tokens.ProcessingInstructionOpenToken, '<?'),
+            (tokens.ProcessingInstructionOpen, '<?'),
             (tokens.ProcessingInstructionTarget, 'xml'),
             ]
         self.scan([xml], expected_tokens)
@@ -540,7 +540,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_processing_instruction_name_data(self):
         xml = "<?xml vers"
         expected_tokens = [
-            (tokens.ProcessingInstructionOpenToken, '<?'),
+            (tokens.ProcessingInstructionOpen, '<?'),
             (tokens.ProcessingInstructionTarget, 'xml'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.ProcessingInstructionData, 'vers'),
@@ -551,7 +551,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_processing_instruction_name_data_quest(self):
         xml = "<?xml vers?"
         expected_tokens = [
-            (tokens.ProcessingInstructionOpenToken, '<?'),
+            (tokens.ProcessingInstructionOpen, '<?'),
             (tokens.ProcessingInstructionTarget, 'xml'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.ProcessingInstructionData, 'vers?'),
@@ -563,7 +563,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_invalid_processing_instruction_name_symbol(self):
         xml = "<?xml!?>"
         expected_tokens = [
-            (tokens.ProcessingInstructionOpenToken, '<?'),
+            (tokens.ProcessingInstructionOpen, '<?'),
             (tokens.ProcessingInstructionTarget, 'xml'),
             (tokens.BadlyFormedEndOfStream, '')
             ]
@@ -606,18 +606,18 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         xml = "some content<tag>"
         expected_tokens = [
             (tokens.PCData, 'some content'),
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
-            (tokens.StartTagCloseToken, '>')
+            (tokens.StartTagClose, '>')
             ]
         self.scan([xml], expected_tokens)
 
     def test_markup_content(self):
         xml = "<tag>some content"
         expected_tokens = [
-            (tokens.StartOrEmptyTagOpenToken, '<'),
+            (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'tag'),
-            (tokens.StartTagCloseToken, '>'),
+            (tokens.StartTagClose, '>'),
             (tokens.PCData, 'some content'),
             ]
         self.scan([xml], expected_tokens)
