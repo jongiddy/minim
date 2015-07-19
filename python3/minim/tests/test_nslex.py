@@ -3,7 +3,7 @@ import unittest
 from minim import iterseq, lex, nslex, tokens
 
 
-class TokenGeneratorMarkupTests(unittest.TestCase):
+class NamespaceTokenScannerMarkupTests(unittest.TestCase):
 
     def scan(self, stream, expected_tokens):
         # Add fake sequence to end, to catch additional tokens being
@@ -12,26 +12,24 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         # fallback to ensure final test fails
         expected_tokens.append((tokens.Token(),))
         buf = iterseq.IterableAsSequence(stream)
-        scanner = nslex.TokenGenerator(lex.TokenGenerator(buf))
-        token_types = iter(scanner)
-        for token_type, expected in zip(token_types, expected_tokens):
-            if token_type.is_token:
-                token = token_type
-                if expected[0].is_token:
-                    self.assertIs(token, expected[0], repr(token.literal))
-                else:
-                    self.assertIsInstance(
-                        token, expected[0], repr(token.literal))
-            else:
-                token = token_types.send(token_type)
-                self.assertIs(token_type, expected[0], repr(token.literal))
-            self.assertEqual(token.literal, expected[1])
+        scanner = nslex.NamespaceTokenScanner(lex.TokenScanner(buf))
+        for token, expected in zip(scanner, expected_tokens):
+            text = scanner.get_text(token)
+            # print(token, repr(text.content()), text.is_final)
+            content = text.content()
+            while not text.is_final:
+                token = scanner.next()
+                text = scanner.get_text(token)
+                content += text.content()
+                self.assertIsInstance(token, expected[0], repr(content))
+            self.assertEqual(content, expected[1])
         self.assertEqual(buf.get(), '')
 
     def test_start_tag(self):
         xml = '<ttns:tag foo="bar" xmlns:ttns="http://url.example.com/">'
         expected_tokens = [
-            (nslex.NamespaceOpen, ''),
+            (nslex.NamespacePrefix, 'ttns'),
+            (nslex.NamespaceUri, 'http://url.example.com/'),
             (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ttns:tag'),
             (tokens.MarkupWhitespace, ' '),
@@ -55,7 +53,6 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         expected_tokens = [
             (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ns:tag'),
-            (tokens.TagName, ''),
             (tokens.BadlyFormedEndOfStream, '')
             ]
         self.scan([xml], expected_tokens)
@@ -66,7 +63,6 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ns:tag'),
             (tokens.MarkupWhitespace, ' '),
-            (tokens.MarkupWhitespace, ''),
             (tokens.BadlyFormedEndOfStream, '')
             ]
         self.scan([xml], expected_tokens)
@@ -78,7 +74,6 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.TagName, 'ns:tag'),
             (tokens.MarkupWhitespace, ' '),
             (tokens.AttributeName, 'xmlns:ns'),
-            (tokens.AttributeName, ''),
             (tokens.BadlyFormedEndOfStream, '')
             ]
         self.scan([xml], expected_tokens)
@@ -118,7 +113,6 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.AttributeEquals, '='),
             (tokens.AttributeValueDoubleOpen, '"'),
             (tokens.AttributeValue, 'http://url.example.com/'),
-            (tokens.AttributeValue, ''),
             (tokens.BadlyFormedEndOfStream, '')
             ]
         self.scan([xml], expected_tokens)
@@ -126,7 +120,8 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_start_tag_space_attribute(self):
         xml = '<ns:tag xmlns:ns="http://url.example.com/"'
         expected_tokens = [
-            (nslex.NamespaceOpen, ''),
+            (nslex.NamespacePrefix, 'ns'),
+            (nslex.NamespaceUri, 'http://url.example.com/'),
             (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ns:tag'),
             (tokens.MarkupWhitespace, ' '),
@@ -142,7 +137,8 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_empty_tag_space_attribute_slash(self):
         xml = '<ns:tag xmlns:ns="http://url.example.com/" /'
         expected_tokens = [
-            (nslex.NamespaceOpen, ''),
+            (nslex.NamespacePrefix, 'ns'),
+            (nslex.NamespaceUri, 'http://url.example.com/'),
             (tokens.StartOrEmptyTagOpen, '<'),
             (tokens.TagName, 'ns:tag'),
             (tokens.MarkupWhitespace, ' '),
@@ -160,7 +156,6 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         xml = "no markup"
         expected_tokens = [
             (tokens.PCData, 'no markup'),
-            (tokens.PCData, ''),
             ]
         self.scan([xml], expected_tokens)
 
@@ -181,7 +176,6 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             (tokens.TagName, 'tag'),
             (tokens.StartTagClose, '>'),
             (tokens.PCData, 'some content'),
-            (tokens.PCData, ''),
             ]
         self.scan([xml], expected_tokens)
 
@@ -193,47 +187,66 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             'some </s',
             'ome>text'
             ]
-        scanner = nslex.TokenGenerator.from_strings(xml)
-        token_types = iter(scanner)
+        scanner = nslex.NamespaceTokenScanner.from_strings(xml)
+        token_stream = iter(scanner)
         literal = ''
         content = ''
-        for token_type in token_types:
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            literal += token.literal
-            if token_type.is_content:
-                content += token.content
+        for token in token_stream:
+            text = scanner.get_text(token)
+            literal += text.literal()
+            if isinstance(token, tokens.Content):
+                content += text.content()
         self.assertEqual(literal, ''.join(xml))
         self.assertEqual(content, 'This issome text')
 
+    def test_default_namespace(self):
+        xml = ['<tag xmlns="bar">']
+        scanner = nslex.NamespaceTokenScanner.from_strings(xml)
+        token_stream = iter(scanner)
+        token = next(token_stream)
+        self.assertIsInstance(token, nslex.NamespaceDefault, token)
+        text = scanner.get_text(token)
+        self.assertEqual(text.content(), '')
+        token = next(token_stream)
+        self.assertIsInstance(token, nslex.NamespaceUri, token)
+        text = scanner.get_text(token)
+        self.assertEqual(text.content(), 'bar')
+
     def test_namespace_values(self):
         xml = ['<tag xmlns:foo="bar">']
-        scanner = nslex.TokenGenerator.from_strings(xml)
-        token_types = iter(scanner)
-        token_type = next(token_types)
-        self.assertTrue(token_type.is_a(nslex.NamespaceOpen))
-        token = scanner.get_token(token_type)
-        self.assertEqual(token.prefix, 'foo')
-        self.assertEqual(token.namespace, 'bar')
+        scanner = nslex.NamespaceTokenScanner.from_strings(xml)
+        token_stream = iter(scanner)
+        token = next(token_stream)
+        self.assertIsInstance(token, nslex.NamespacePrefix, token)
+        text = scanner.get_text(token)
+        self.assertEqual(text.content(), 'foo')
+        token = next(token_stream)
+        self.assertIsInstance(token, nslex.NamespaceUri, token)
+        text = scanner.get_text(token)
+        self.assertEqual(text.content(), 'bar')
 
     def test_namespace_values_split_name(self):
         xml = ['<tag xmlns:fo', 'o="bar">']
-        scanner = nslex.TokenGenerator.from_strings(xml)
-        token_types = iter(scanner)
-        token_type = next(token_types)
-        self.assertTrue(token_type.is_a(nslex.NamespaceOpen))
-        token = scanner.get_token(token_type)
-        self.assertEqual(token.prefix, 'foo')
-        self.assertEqual(token.namespace, 'bar')
+        scanner = nslex.NamespaceTokenScanner.from_strings(xml)
+        token_stream = iter(scanner)
+        token = next(token_stream)
+        self.assertIsInstance(token, nslex.NamespacePrefix, token)
+        text = scanner.get_text(token)
+        self.assertEqual(text.content(), 'foo')
+        token = next(token_stream)
+        self.assertIsInstance(token, nslex.NamespaceUri, token)
+        text = scanner.get_text(token)
+        self.assertEqual(text.content(), 'bar')
 
     def test_namespace_values_split_url(self):
         xml = ['<tag xmlns:foo="b', 'ar">']
-        scanner = nslex.TokenGenerator.from_strings(xml)
-        token_types = iter(scanner)
-        token_type = next(token_types)
-        self.assertTrue(token_type.is_a(nslex.NamespaceOpen))
-        token = scanner.get_token(token_type)
-        self.assertEqual(token.prefix, 'foo')
-        self.assertEqual(token.namespace, 'bar')
+        scanner = nslex.NamespaceTokenScanner.from_strings(xml)
+        token_stream = iter(scanner)
+        token = next(token_stream)
+        self.assertIsInstance(token, nslex.NamespacePrefix, token)
+        text = scanner.get_text(token)
+        self.assertEqual(text.content(), 'foo')
+        token = next(token_stream)
+        self.assertIsInstance(token, nslex.NamespaceUri, token)
+        text = scanner.get_text(token)
+        self.assertEqual(text.content(), 'bar')

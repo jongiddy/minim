@@ -6,9 +6,9 @@ from minim import nslex, tokens
 def run(doc):
     start_element = tokens.StartOrEmptyTagOpen
     count = 0
-    token_types = nslex.TokenGenerator.from_strings(doc)
-    for token_type in token_types:
-        if token_type.is_a(start_element):
+    scanner = nslex.NamespaceTokenScanner.from_strings(doc)
+    for token in scanner:
+        if isinstance(token, start_element):
             count += 1
     return count
 

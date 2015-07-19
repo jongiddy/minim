@@ -1,15 +1,30 @@
 from minim import lex, tokens
 
-
-class NamespaceOpen(tokens.Token):
-
-    def __init__(self, namespace, prefix=''):
-        super().__init__(literal='')
-        self.namespace = namespace
-        self.prefix = prefix
+empty_text = tokens.TextHolder('')
 
 
-class TokenGenerator(lex.SendBasedTokenGenerator):
+class NamespaceIdentifier(tokens.WellFormed, tokens.Token):
+    pass
+
+
+class NamespacePrefix(NamespaceIdentifier):
+    pass
+
+
+class NamespaceDefault(NamespaceIdentifier):
+    pass
+
+
+class NamespaceUri(tokens.WellFormed, tokens.Token):
+    pass
+
+
+_NamespacePrefixToken = NamespacePrefix()
+_NamespaceDefaultTextToken = NamespaceDefault(tokens.TextHolder(''))
+_NamespaceUriToken = NamespaceUri()
+
+
+class NamespaceTokenScanner(lex.SendBasedTokenScanner):
 
     """A generator to add namespace tokens to a basic token generator.
 
@@ -28,82 +43,91 @@ class TokenGenerator(lex.SendBasedTokenGenerator):
     @classmethod
     def from_strings(cls, string_iter):
         """Generates tokens from the supplied iterator."""
-        return cls(lex.TokenGenerator.from_strings(string_iter))
+        return cls(lex.TokenScanner.from_strings(string_iter))
 
     def create_generator(self):
         return self.insert_namespace_tokens(self.token_generator)
 
-    def insert_namespace_tokens(self, token_generator):
+    def insert_namespace_tokens(self, token_stream):
         cached_tokens = []
-        for token_type in token_generator:
-            if token_type.is_a(tokens.StartOrEmptyTagOpen):
-                cached_tokens = [token_generator.get_token(token_type)]
-                token_type = token_generator.next()
-                while not token_type.is_a(tokens.StartOrEmptyTagClose):
-                    token = token_generator.get_token(token_type)
-                    if token_type.is_a(tokens.AttributeName):
-                        name = token.literal
-                        cached_tokens.append(token)
-                        token_type = token_generator.next()
-                        while token_type.is_a(tokens.AttributeName):
-                            token = token_generator.get_token(token_type)
-                            name += token.literal
+        for token in token_stream:
+            if isinstance(token, tokens.StartOrEmptyTagOpen):
+                cached_tokens = [token.clone(token_stream.get_text(token))]
+                token = token_stream.next()
+                while not isinstance(token, tokens.StartOrEmptyTagClose):
+                    if isinstance(token, tokens.AttributeName):
+                        text = token_stream.get_text(token)
+                        name = text.literal()
+                        cached_tokens.append(token.clone(text))
+                        token = token_stream.next()
+                        while isinstance(token, tokens.AttributeName):
+                            text = token_stream.get_text(token)
+                            name += text.literal()
                             if len(name) > self.xmlns_name_limit:
                                 raise RuntimeError('name too long')
-                            cached_tokens.append(token)
-                            token_type = token_generator.next()
+                            cached_tokens.append(token.clone(text))
+                            token = token_stream.next()
                         if name.startswith('xmlns'):
-                            while token_type.is_a(tokens.MarkupWhitespace):
+                            while isinstance(token, tokens.MarkupWhitespace):
                                 cached_tokens.append(
-                                    token_generator.get_token(token_type))
-                                token_type = token_generator.next()
-                            if token_type.is_a(tokens.BadlyFormedEndOfStream):
+                                    token.clone(token_stream.get_text(token)))
+                                token = token_stream.next()
+                            if isinstance(
+                                    token, tokens.BadlyFormedEndOfStream):
                                 break
-                            assert token_type.is_a(
-                                tokens.AttributeEquals), token_type
+                            assert isinstance(
+                                token, tokens.AttributeEquals), token
                             cached_tokens.append(
-                                token_generator.get_token(token_type))
-                            token_type = token_generator.next()
-                            while token_type.is_a(tokens.MarkupWhitespace):
+                                token.clone(token_stream.get_text(token)))
+                            token = token_stream.next()
+                            while isinstance(token, tokens.MarkupWhitespace):
                                 cached_tokens.append(
-                                    token_generator.get_token(token_type))
-                                token_type = token_generator.next()
-                            if token_type.is_a(tokens.BadlyFormedEndOfStream):
+                                    token.clone(token_stream.get_text(token)))
+                                token = token_stream.next()
+                            if isinstance(
+                                    token, tokens.BadlyFormedEndOfStream):
                                 break
-                            assert token_type.is_a(
-                                tokens.AttributeValueOpen), token_type
+                            assert isinstance(
+                                token, tokens.AttributeValueOpen), token
                             cached_tokens.append(
-                                token_generator.get_token(token_type))
-                            token_type = token_generator.next()
+                                token.clone(token_stream.get_text(token)))
+                            token = token_stream.next()
                             value = ''
-                            while token_type.is_a(tokens.AttributeValue):
-                                token = token_generator.get_token(token_type)
-                                value += token.literal
+                            while isinstance(token, tokens.AttributeValue):
+                                text = token_stream.get_text(token)
+                                value += text.literal()
                                 if len(value) > self.xmlns_url_limit:
                                     raise RuntimeError('URL too long')
-                                cached_tokens.append(token)
-                                token_type = token_generator.next()
-                            if token_type.is_a(tokens.BadlyFormedEndOfStream):
+                                cached_tokens.append(token.clone(text))
+                                token = token_stream.next()
+                            if isinstance(
+                                    token, tokens.BadlyFormedEndOfStream):
                                 break
-                            assert token_type.is_a(
-                                tokens.AttributeValueClose), token_type
+                            assert isinstance(
+                                token, tokens.AttributeValueClose), token
                             cached_tokens.append(
-                                token_generator.get_token(token_type))
+                                token.clone(token_stream.get_text(token)))
                             if name == 'xmlns':
-                                prefix = ''
+                                yield _NamespaceDefaultTextToken
                             else:
                                 assert name[5] == ':', name
-                                prefix = name[6:]
+                                text = yield _NamespacePrefixToken
+                                if text is not None:
+                                    prefix = name[6:]
+                                    text.set('', content=prefix)
+                                    yield text
                             namespace = value
-                            result = yield NamespaceOpen
-                            if result is not None:
-                                yield NamespaceOpen(namespace, prefix)
-                            token_type = token_generator.next()
+                            text = yield _NamespaceUriToken
+                            if text is not None:
+                                text.set('', content=namespace)
+                                yield text
+                            token = token_stream.next()
                     else:
-                        cached_tokens.append(token)
-                        token_type = token_generator.next()
+                        cached_tokens.append(
+                            token.clone(token_stream.get_text(token)))
+                        token = token_stream.next()
                 yield from cached_tokens
             # Standard way to pass tokens through:
-            result = yield token_type
-            if result is not None:
-                yield token_generator.get_token(token_type)
+            text = yield token
+            if text is not None:
+                yield token_stream.get_text(token, text)

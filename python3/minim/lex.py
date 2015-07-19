@@ -24,22 +24,40 @@ _stop_iteration = StopIteration()
 _stop_iteration_found = StopIteration(True)
 _stop_iteration_not_found = StopIteration(False)
 
-StartOrEmptyTagOpenToken = tokens.StartOrEmptyTagOpen('<')
-EndTagOpenToken = tokens.EndTagOpen('</')
-AttributeEqualsToken = tokens.AttributeEquals('=')
-AttributeValueDoubleOpenToken = tokens.AttributeValueDoubleOpen('"')
-AttributeValueSingleOpenToken = tokens.AttributeValueSingleOpen("'")
-AttributeValueDoubleCloseToken = tokens.AttributeValueDoubleClose('"')
-AttributeValueSingleCloseToken = tokens.AttributeValueSingleClose("'")
-StartTagCloseToken = tokens.StartTagClose('>')
-EmptyTagCloseToken = tokens.EmptyTagClose('/>')
-EndTagCloseToken = tokens.EndTagClose('>')
-ProcessingInstructionOpenToken = tokens.ProcessingInstructionOpen('<?')
-ProcessingInstructionCloseToken = tokens.ProcessingInstructionClose('?>')
-CommentOpenToken = tokens.CommentOpen('<!--')
-CommentCloseToken = tokens.CommentClose('-->')
-CDataOpenToken = tokens.CDataOpen('<![CDATA[')
-CDataCloseToken = tokens.CDataClose(']]>')
+_StartOrEmptyTagOpenTextToken = tokens.StartOrEmptyTagOpen(
+    tokens.TextHolder('<'))
+_EndTagOpenTextToken = tokens.EndTagOpen(tokens.TextHolder('</'))
+_AttributeEqualsTextToken = tokens.AttributeEquals(tokens.TextHolder('='))
+_dquote = tokens.TextHolder('"')
+_squote = tokens.TextHolder("'")
+_AttributeValueDoubleOpenTextToken = tokens.AttributeValueDoubleOpen(_dquote)
+_AttributeValueSingleOpenTextToken = tokens.AttributeValueSingleOpen(_squote)
+_AttributeValueDoubleCloseTextToken = tokens.AttributeValueDoubleClose(_dquote)
+_AttributeValueSingleCloseTextToken = tokens.AttributeValueSingleClose(_squote)
+_gt = tokens.TextHolder('>')
+_StartTagCloseTextToken = tokens.StartTagClose(_gt)
+_EmptyTagCloseTextToken = tokens.EmptyTagClose(tokens.TextHolder('/>'))
+_EndTagCloseTextToken = tokens.EndTagClose(_gt)
+_ProcessingInstructionOpenTextToken = tokens.ProcessingInstructionOpen(
+    tokens.TextHolder('<?'))
+_ProcessingInstructionCloseTextToken = tokens.ProcessingInstructionClose(
+    tokens.TextHolder('?>'))
+_CommentOpenTextToken = tokens.CommentOpen(tokens.TextHolder('<!--'))
+_CommentCloseTextToken = tokens.CommentClose(tokens.TextHolder('-->'))
+_CDataOpenTextToken = tokens.CDataOpen(tokens.TextHolder('<![CDATA['))
+_CDataCloseTextToken = tokens.CDataClose(tokens.TextHolder(']]>'))
+_BadlyFormedEndOfStreamEmptyTextToken = tokens.BadlyFormedEndOfStream(
+    tokens.TextHolder(''))
+
+_MarkupWhitespaceToken = tokens.MarkupWhitespace()
+_TagNameToken = tokens.TagName()
+_CDataToken = tokens.CData()
+_PCDataToken = tokens.PCData()
+_WhitespaceContentToken = tokens.WhitespaceContent()
+_ProcessingInstructionTargetToken = tokens.ProcessingInstructionTarget()
+_ProcessingInstructionDataToken = tokens.ProcessingInstructionData()
+_AttributeNameToken = tokens.AttributeName()
+_AttributeValueToken = tokens.AttributeValue()
 
 
 class SentinelParser(Iterator):
@@ -50,9 +68,10 @@ class SentinelParser(Iterator):
     of the sentinel, or to the end of the stream.
     """
 
-    def __call__(self, buf, token_type, sentinel):
+    def __call__(self, buf, token, sentinel):
+        assert isinstance(token, tokens.Token), token
         self.buf = buf
-        self.token_type = token_type
+        self.token = token
         self.sentinel = sentinel
         return self
 
@@ -91,44 +110,37 @@ class SentinelParser(Iterator):
             # content to emit, but sentinel not found
             self.is_final = False
             self.needs_final = True
-        return self.token_type
+        return self.token
 
-    def send(self, val):
-        if val.is_token:
-            val.set(
-                literal=self.buf.extract(), is_initial=self.is_initial,
-                is_final=self.is_final)
-        else:
-            assert val is self.token_type, val
-            val = self.token_type(
-                literal=self.buf.extract(), is_initial=self.is_initial,
-                is_final=self.is_final)
-        return val
+    def send(self, text):
+        assert isinstance(text, tokens.TextHolder), text
+        text.set(
+            encoded=self.buf.extract(), is_initial=self.is_initial,
+            is_final=self.is_final)
+        return text
 
 
 class LiteralResponder(Iterator):
 
     """A non-allocating iterator for a literal value."""
 
-    def __call__(self, token_type, literal):
-        self.token_type = token_type
+    def __call__(self, token, literal):
+        assert isinstance(token, tokens.Token), token
+        self.token = token
         self.literal = literal
         return self
 
     def __next__(self):
         if self.literal is None:
             raise _stop_iteration
-        yield self.token_type
+        yield self.token
 
-    def send(self, val):
+    def send(self, text):
         if self.literal is None:
             raise _stop_iteration
-        if val.is_token:
-            val.set(literal=self.buf.literal)
-        else:
-            assert val is self.token_type, val
-            val = self.token_type(literal=self.literal)
-        return val
+        assert isinstance(text, tokens.TextHolder), text
+        text.set(encoded=self.buf.extract())
+        return text
 
 
 class PatternParser(Iterator):
@@ -138,9 +150,10 @@ class PatternParser(Iterator):
     def __init__(self, pat):
         self.pat = pat
 
-    def __call__(self, buf, token_type):
+    def __call__(self, buf, token):
+        assert isinstance(token, tokens.Token), token
         self.buf = buf
-        self.token_type = token_type
+        self.token = token
         return self
 
     def __iter__(self):
@@ -163,7 +176,7 @@ class PatternParser(Iterator):
                 self.stopped = _stop_iteration_not_found
             if not self.is_initial and not self.is_final:
                 self.is_final = True
-                return self.token_type
+                return self.token
             else:
                 raise self.stopped
         else:
@@ -171,19 +184,14 @@ class PatternParser(Iterator):
             if matched < 0:
                 self.is_final = True
                 self.stopped = _stop_iteration_found
-            return self.token_type
+            return self.token
 
-    def send(self, val):
-        if val.is_token:
-            val.set(
-                literal=self.buf.extract(), is_initial=self.is_initial,
-                is_final=self.is_final)
-        else:
-            assert val is self.token_type, val
-            val = self.token_type(
-                literal=self.buf.extract(), is_initial=self.is_initial,
-                is_final=self.is_final)
-        return val
+    def send(self, text):
+        assert isinstance(text, tokens.TextHolder), text
+        text.set(
+            encoded=self.buf.extract(), is_initial=self.is_initial,
+            is_final=self.is_final)
+        return text
 
 
 class WhitespaceParser(PatternParser):
@@ -235,47 +243,47 @@ class GeneratesTokens(Iterable, metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def token_type_to_token(self, token_type, token):
-        """Convert a token type to a token.
+    def token_to_text(self, token, text_holder):
+        """Obtain the text for the current token.
 
-        This method does the work of turning a token type into a token.
-        The supplied token parameter is a type of token that can be
-        filled in instead of allocating a new token."""
+        This method does the work of turning a token into text."""
 
-    def get_token(self, token_type, token=None):
-        """Return the current token in the input stream.
+    def get_text(self, token, text_holder=None):
+        """Return the current text in the input stream.
 
         If the token type is of interest to the processor, calling this
-        method will return an actual token, which can be processed
+        method will return the actual text, which can be processed
         further.
 
-        If the optional ``token`` parameter is not provided, this will
-        usually allocate a new token.
+        If the optional ``text_holder`` parameter is not provided, this
+        will usually allocate a new Text instance.
 
-        If the optional ``token`` parameter is provided, this function
-        **may** choose to use the provided (subclass of) ``Token`` as
-        the returned token.  This allows the opportunity for the system
-        to avoid allocating memory for the token.
+        If the optional ``text_holder`` parameter is provided, this
+        function **may** choose to use the provided (subclass of)
+        ``TextHolder`` as the returned text.  This allows the
+        opportunity for the system to avoid allocating memory for the
+        text.
 
-        Note that this method is not required to use the provided token,
-        so the return value must be used for subsequent processing of
-        the current token.
+        Note that this method is not required to use the provided text
+        holder, so the return value must be used for subsequent
+        processing of the text.
 
-        :param token_type: A Token Type returned from the iterator
-        :param token: An optional Token that can be set
-        :return: The current token in the input stream
-        :rtype: minim.tokens.Token
+        :param token: A Token returned from the iterator
+        :param text_holder: An optional TextHolder that can be set
+        :return: The current text in the input stream
+        :rtype: minim.tokens.TextHolder
         """
-        if token_type.is_token:
-            # The iterator is permitted to return a token for next()
-            # rather than a token_type.  In this case, just return the
-            # token again.
-            return token_type
-        else:
-            return self.token_type_to_token(token_type, token)
+        assert isinstance(token, tokens.Token), token
+        text = token.text
+        if text is None:
+            if text_holder is None:
+                text_holder = tokens.TextHolder()
+            assert isinstance(text_holder, tokens.TextHolder), text_holder
+            text = self.token_to_text(token, text_holder)
+        return text
 
 
-class SendBasedTokenGenerator(GeneratesTokens):
+class SendBasedTokenScanner(GeneratesTokens):
 
     """An iterable that yields token types, and responds to send()
     with the token matching the token type."""
@@ -294,14 +302,11 @@ class SendBasedTokenGenerator(GeneratesTokens):
     def next(self):
         return next(self.generator)
 
-    def token_type_to_token(self, token_type, token):
-        if token is None:
-            return self.generator.send(token_type)
-        else:
-            return self.generator.send(token)
+    def token_to_text(self, token, text_holder):
+        return self.generator.send(text_holder)
 
 
-class BufferBasedTokenGenerator(GeneratesTokens):
+class BufferBasedTokenScanner(GeneratesTokens):
 
     """An iterable that yields token types, and uses buffer state to
     return the token matching the token type.
@@ -325,14 +330,14 @@ class BufferBasedTokenGenerator(GeneratesTokens):
     def next(self):
         return next(self.generator)
 
-    def token_type_to_token(self, token_type, token):
-        if token is None:
-            return self.current_parser.send(token_type)
-        else:
+    def token_to_text(self, token, text_holder):
+        if text_holder is None:
             return self.current_parser.send(token)
+        else:
+            return self.current_parser.send(text_holder)
 
 
-class TokenGenerator(BufferBasedTokenGenerator):
+class TokenScanner(BufferBasedTokenScanner):
 
     def __init__(self, buf):
         super().__init__()
@@ -342,17 +347,17 @@ class TokenGenerator(BufferBasedTokenGenerator):
         self.space_parser = WhitespaceParser()
         self.sentinel_parser = SentinelParser()
 
-    def parse_name(self, buf, token_type):
+    def parse_name(self, buf, token):
         self.current_parser = self.name_parser
-        return self.name_parser(buf, token_type)
+        return self.name_parser(buf, token)
 
-    def parse_space(self, buf, token_type):
+    def parse_space(self, buf, token):
         self.current_parser = self.space_parser
-        return self.space_parser(buf, token_type)
+        return self.space_parser(buf, token)
 
-    def parse_until(self, buf, token_type, sentinel):
+    def parse_until(self, buf, token, sentinel):
         self.current_parser = self.sentinel_parser
-        return self.sentinel_parser(buf, token_type, sentinel)
+        return self.sentinel_parser(buf, token, sentinel)
 
     @classmethod
     def from_strings(cls, string_iter):
@@ -364,39 +369,38 @@ class TokenGenerator(BufferBasedTokenGenerator):
 
     def parse(self, buf):
         # Whitespace before initial non-ws is not considered to be content
-        yield from self.parse_space(buf, tokens.MarkupWhitespace)
-        yield from self.parse_until(
-            buf, tokens.PCData, '<')
+        yield from self.parse_space(buf, _MarkupWhitespaceToken)
+        yield from self.parse_until(buf, _PCDataToken, '<')
         while buf.get() == '<':
             ch = buf.next()
             if ch == '/':
                 ch = buf.next()
                 if self.name_parser.matches_initial(ch):
-                    yield EndTagOpenToken
-                    yield from self.parse_name(buf, tokens.TagName)
-                    yield from self.parse_space(buf, tokens.MarkupWhitespace)
+                    yield _EndTagOpenTextToken
+                    yield from self.parse_name(buf, _TagNameToken)
+                    yield from self.parse_space(buf, _MarkupWhitespaceToken)
                     ch = buf.get()
                     if not ch:
-                        yield tokens.BadlyFormedEndOfStream()
+                        yield _BadlyFormedEndOfStreamEmptyTextToken
                         return
                     elif ch != '>':
                         raise RuntimeError('extra data in close tag')
-                    yield EndTagCloseToken
+                    yield _EndTagCloseTextToken
                     buf.advance()
                 else:
                     yield tokens.BadlyFormedLessThanToken
-                    yield tokens.PCData(literal='/')
+                    yield tokens.PCData(tokens.TextHolder('/'))
             elif ch == '?':
                 ch = buf.next()
                 if self.name_parser.matches_initial(ch):
-                    yield ProcessingInstructionOpenToken
+                    yield _ProcessingInstructionOpenTextToken
                     yield from self.parse_name(
-                        buf, tokens.ProcessingInstructionTarget)
+                        buf, _ProcessingInstructionTargetToken)
                     ws_found = yield from self.parse_space(
-                        buf, tokens.MarkupWhitespace)
+                        buf, _MarkupWhitespaceToken)
                     if ws_found:
                         found = yield from self.parse_until(
-                            buf, tokens.ProcessingInstructionData, '?>')
+                            buf, _ProcessingInstructionDataToken, '?>')
                         if buf.starts_with('?>'):
                             # `starts_with` is redundant, since `found`
                             # indicates whether the sentinel was found.
@@ -405,62 +409,62 @@ class TokenGenerator(BufferBasedTokenGenerator):
                         else:
                             # must be EOS
                             assert not found, found
-                            yield tokens.BadlyFormedEndOfStream()
+                            yield _BadlyFormedEndOfStreamEmptyTextToken
                             return
                     else:
                         if not buf.get():
-                            yield tokens.BadlyFormedEndOfStream()
+                            yield _BadlyFormedEndOfStreamEmptyTextToken
                             return
                         if not buf.starts_with('?>'):
                             raise RuntimeError(
                                 'Expected ?>, got %r' % buf.get())
-                    yield ProcessingInstructionCloseToken
+                    yield _ProcessingInstructionCloseTextToken
                 else:
                     yield tokens.BadlyFormedLessThanToken
-                    yield tokens.PCData(literal='?')
+                    yield tokens.PCData(tokens.TextHolder('?'))
             elif ch == '!':
                 ch = buf.next()
                 if ch == '-':
                     ch = buf.next()
                     if ch == '-':
-                        yield CommentOpenToken
+                        yield _CommentOpenTextToken
                         buf.advance()
                         yield from self.parse_until(
-                            buf, tokens.CommentData, '-->')
+                            buf, tokens.CommentData(), '-->')
                         if not buf.starts_with('-->'):
-                            yield tokens.BadlyFormedEndOfStream()
+                            yield _BadlyFormedEndOfStreamEmptyTextToken
                             return
-                        yield CommentCloseToken
+                        yield _CommentCloseTextToken
                     else:
                         # < does not appear to be well-formed markup - emit a
                         # literal <
                         yield tokens.BadlyFormedLessThanToken
-                        yield tokens.PCData(literal='!-')
+                        yield tokens.PCData(tokens.TextHolder('!-'))
                 elif ch == '[':
                     buf.advance()
                     if buf.starts_with('CDATA['):
-                        yield CDataOpenToken
+                        yield _CDataOpenTextToken
                         found = yield from self.parse_until(
-                            buf, tokens.CData, ']]>')
+                            buf, _CDataToken, ']]>')
                         if not buf.starts_with(']]>'):
                             assert not found, found
                             assert not buf.get(), buf.get()
-                            yield tokens.BadlyFormedEndOfStream()
+                            yield _BadlyFormedEndOfStreamEmptyTextToken
                             return
-                        yield CDataCloseToken
+                        yield _CDataCloseTextToken
                     else:
                         # declaration
                         raise NotImplementedError(
                             'Declarations not implemented')
                 else:
                     yield tokens.BadlyFormedLessThanToken
-                    yield tokens.PCData(literal='!')
+                    yield tokens.PCData('!')
             elif self.name_parser.matches_initial(ch):
-                yield StartOrEmptyTagOpenToken
-                if not (yield from self.parse_name(buf, tokens.TagName)):
+                yield _StartOrEmptyTagOpenTextToken
+                if not (yield from self.parse_name(buf, _TagNameToken)):
                     raise RuntimeError('Expected tag name')
                 ws_found = yield from self.parse_space(
-                    buf, tokens.MarkupWhitespace)
+                    buf, _MarkupWhitespaceToken)
                 ch = buf.get()
                 while ch not in ('', '>', '/'):
                     if not ws_found:
@@ -468,59 +472,60 @@ class TokenGenerator(BufferBasedTokenGenerator):
                             'Expected whitespace, >, or />, found %r' % ch)
                     if not self.name_parser.matches_initial(ch):
                         raise RuntimeError('Expected attribute name')
-                    yield from self.parse_name(buf, tokens.AttributeName)
-                    yield from self.parse_space(buf, tokens.MarkupWhitespace)
+                    yield from self.parse_name(buf, _AttributeNameToken)
+                    yield from self.parse_space(buf, _MarkupWhitespaceToken)
                     ch = buf.get()
                     if ch == '=':
-                        yield AttributeEqualsToken
+                        yield _AttributeEqualsTextToken
                         buf.advance()
                         yield from self.parse_space(
-                            buf, tokens.MarkupWhitespace)
+                            buf, _MarkupWhitespaceToken)
                         ch = buf.get()
                         if not ch:
-                            yield tokens.BadlyFormedEndOfStream()
+                            yield _BadlyFormedEndOfStreamEmptyTextToken
                             return
                         if ch in ('"', "'"):
                             if ch == '"':
-                                yield AttributeValueDoubleOpenToken
+                                yield _AttributeValueDoubleOpenTextToken
                             else:
-                                yield AttributeValueSingleOpenToken
+                                yield _AttributeValueSingleOpenTextToken
                             buf.advance()
                             yield from self.parse_until(
-                                buf, tokens.AttributeValue, ch)
+                                buf, _AttributeValueToken, ch)
                             if not buf.starts_with(ch):
-                                yield tokens.BadlyFormedEndOfStream()
+                                yield _BadlyFormedEndOfStreamEmptyTextToken
                                 return
                             if ch == '"':
-                                yield AttributeValueDoubleCloseToken
+                                yield _AttributeValueDoubleCloseTextToken
                             else:
-                                yield AttributeValueSingleCloseToken
+                                yield _AttributeValueSingleCloseTextToken
                         else:
                             # HTML fallback - need a parser to read un-quoted
                             # attribute
                             raise RuntimeError()
                         ws_found = yield from self.parse_space(
-                            buf, tokens.MarkupWhitespace)
+                            buf, _MarkupWhitespaceToken)
                         ch = buf.get()
                 if not ch:
-                    yield tokens.BadlyFormedEndOfStream()
+                    yield _BadlyFormedEndOfStreamEmptyTextToken
                     return
                 elif ch == '>':
-                    yield StartTagCloseToken
+                    yield _StartTagCloseTextToken
                     buf.advance()
                 else:
                     assert ch == '/'
                     ch = buf.next()
                     if not ch:
-                        yield tokens.BadlyFormedEndOfStream('/')
+                        yield tokens.BadlyFormedEndOfStream(
+                            tokens.TextHolder('/'))
                         return
                     elif ch != '>':
                         raise RuntimeError('Expected />')
-                    yield EmptyTagCloseToken
+                    yield _EmptyTagCloseTextToken
                     buf.advance()
             else:
                 # < does not appear to be well-formed markup - treat it
                 # as a content character
                 yield tokens.BadlyFormedLessThanToken
-            yield from self.parse_space(buf, tokens.WhitespaceContent)
-            yield from self.parse_until(buf, tokens.PCData, '<')
+            yield from self.parse_space(buf, _WhitespaceContentToken)
+            yield from self.parse_until(buf, _PCDataToken, '<')

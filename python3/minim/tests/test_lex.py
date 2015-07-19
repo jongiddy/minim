@@ -9,11 +9,11 @@ class NmTokenParserTests(unittest.TestCase):
         s = 'foo '
         buf = iterseq.IterableAsSequence([s])
         parse_name = lex.NmTokenParser()
-        parse_name(buf, tokens.TagName)
+        parse_name(buf, tokens.TagName())
         parse_name = iter(parse_name)
-        self.assertIs(next(parse_name), tokens.TagName)
-        token = parse_name.send(tokens.TagName)
-        self.assertEqual(token.literal, 'foo')
+        self.assertIsInstance(next(parse_name), tokens.TagName)
+        text = parse_name.send(tokens.TextHolder())
+        self.assertEqual(text.literal(), 'foo')
         with self.assertRaises(StopIteration) as stop:
             next(parse_name)
         # Test that StopIteration indicates found is True
@@ -23,18 +23,18 @@ class NmTokenParserTests(unittest.TestCase):
         s = 'foo'
         buf = iterseq.IterableAsSequence([s])
         parse_name = lex.NmTokenParser()
-        parse_name(buf, tokens.TagName)
+        parse_name(buf, tokens.TagName())
         parse_name = iter(parse_name)
-        self.assertIs(next(parse_name), tokens.TagName)
-        token = parse_name.send(tokens.TagName)
-        self.assertEqual(token.literal, 'foo')
-        self.assertIs(token.is_initial, True)
-        self.assertIs(token.is_final, False)
-        self.assertIs(next(parse_name), tokens.TagName)
-        token = parse_name.send(tokens.TagName)
-        self.assertEqual(token.literal, '')
-        self.assertIs(token.is_initial, False)
-        self.assertIs(token.is_final, True)
+        self.assertIsInstance(next(parse_name), tokens.TagName)
+        text = parse_name.send(tokens.TextHolder())
+        self.assertEqual(text.literal(), 'foo')
+        self.assertIs(text.is_initial, True)
+        self.assertIs(text.is_final, False)
+        self.assertIsInstance(next(parse_name), tokens.TagName)
+        text = parse_name.send(tokens.TextHolder())
+        self.assertEqual(text.literal(), '')
+        self.assertIs(text.is_initial, False)
+        self.assertIs(text.is_final, True)
         with self.assertRaises(StopIteration) as stop:
             next(parse_name)
         # Test that StopIteration indicates found is True
@@ -45,18 +45,18 @@ class NmTokenParserTests(unittest.TestCase):
         s = ['foo', '-bar>']
         buf = iterseq.IterableAsSequence(s)
         parse_name = lex.NmTokenParser()
-        parse_name(buf, tokens.TagName)
+        parse_name(buf, tokens.TagName())
         parse_name = iter(parse_name)
-        self.assertIs(next(parse_name), tokens.TagName)
-        token = parse_name.send(tokens.TagName)
-        self.assertEqual(token.literal, 'foo')
-        self.assertIs(token.is_initial, True)
-        self.assertIs(token.is_final, False)
-        self.assertIs(next(parse_name), tokens.TagName)
-        token = parse_name.send(tokens.TagName)
-        self.assertEqual(token.literal, '-bar')
-        self.assertIs(token.is_initial, False)
-        self.assertIs(token.is_final, True)
+        self.assertIsInstance(next(parse_name), tokens.TagName)
+        text = parse_name.send(tokens.TextHolder())
+        self.assertEqual(text.literal(), 'foo')
+        self.assertIs(text.is_initial, True)
+        self.assertIs(text.is_final, False)
+        self.assertIsInstance(next(parse_name), tokens.TagName)
+        text = parse_name.send(tokens.TextHolder())
+        self.assertEqual(text.literal(), '-bar')
+        self.assertIs(text.is_initial, False)
+        self.assertIs(text.is_final, True)
         self.assertEqual(buf.get(), '>')
 
     def test_letters_are_names(self):
@@ -101,11 +101,11 @@ class WhitespaceParserTests(unittest.TestCase):
         s = ' ' * 3 + 'foo'
         buf = iterseq.IterableAsSequence([s])
         parse_whitespace = lex.WhitespaceParser()
-        parse_whitespace(buf, tokens.MarkupWhitespace)
+        parse_whitespace(buf, tokens.MarkupWhitespace())
         parse_whitespace = iter(parse_whitespace)
-        self.assertIs(next(parse_whitespace), tokens.MarkupWhitespace)
-        token = parse_whitespace.send(tokens.MarkupWhitespace)
-        self.assertEqual(token.literal, ' ' * 3)
+        self.assertIsInstance(next(parse_whitespace), tokens.MarkupWhitespace)
+        text = parse_whitespace.send(tokens.TextHolder())
+        self.assertEqual(text.literal(), ' ' * 3)
         with self.assertRaises(StopIteration) as stop:
             next(parse_whitespace)
         # Test that StopIteration indicates found is True
@@ -115,18 +115,18 @@ class WhitespaceParserTests(unittest.TestCase):
         s = ' ' * 3
         buf = iterseq.IterableAsSequence([s])
         parse_whitespace = lex.WhitespaceParser()
-        parse_whitespace(buf, tokens.MarkupWhitespace)
+        parse_whitespace(buf, tokens.MarkupWhitespace())
         parse_whitespace = iter(parse_whitespace)
-        self.assertIs(next(parse_whitespace), tokens.MarkupWhitespace)
-        token = parse_whitespace.send(tokens.MarkupWhitespace)
-        self.assertEqual(token.literal, ' ' * 3)
-        self.assertIs(token.is_initial, True)
-        self.assertIs(token.is_final, False)
-        self.assertIs(next(parse_whitespace), tokens.MarkupWhitespace)
-        token = parse_whitespace.send(tokens.MarkupWhitespace)
-        self.assertEqual(token.literal, '')
-        self.assertIs(token.is_initial, False)
-        self.assertIs(token.is_final, True)
+        self.assertIsInstance(next(parse_whitespace), tokens.MarkupWhitespace)
+        text = parse_whitespace.send(tokens.TextHolder())
+        self.assertEqual(text.literal(), ' ' * 3)
+        self.assertIs(text.is_initial, True)
+        self.assertIs(text.is_final, False)
+        self.assertIsInstance(next(parse_whitespace), tokens.MarkupWhitespace)
+        text = parse_whitespace.send(tokens.TextHolder())
+        self.assertEqual(text.literal(), '')
+        self.assertIs(text.is_initial, False)
+        self.assertIs(text.is_final, True)
         with self.assertRaises(StopIteration) as stop:
             next(parse_whitespace)
         # Test that StopIteration indicates found is True
@@ -136,7 +136,7 @@ class WhitespaceParserTests(unittest.TestCase):
         s = 'foo'
         buf = iterseq.IterableAsSequence([s])
         parse_whitespace = lex.WhitespaceParser()
-        parse_whitespace(buf, tokens.MarkupWhitespace)
+        parse_whitespace(buf, tokens.MarkupWhitespace())
         parse_whitespace = iter(parse_whitespace)
         with self.assertRaises(StopIteration) as stop:
             next(parse_whitespace)
@@ -151,7 +151,7 @@ class SentinelParserTests(unittest.TestCase):
         s = '?>fix'
         buf = iterseq.IterableAsSequence([s])
         parse_sentinel = lex.SentinelParser()
-        parse_sentinel(buf, tokens.Content, '?>')
+        parse_sentinel(buf, tokens.Content(), '?>')
         parse_sentinel = iter(parse_sentinel)
         with self.assertRaises(StopIteration) as stop:
             next(parse_sentinel)
@@ -164,11 +164,11 @@ class SentinelParserTests(unittest.TestCase):
         s = 'more?>fix'
         buf = iterseq.IterableAsSequence([s])
         parse_sentinel = lex.SentinelParser()
-        parse_sentinel(buf, tokens.Content, '?>')
+        parse_sentinel(buf, tokens.Content(), '?>')
         parse_sentinel = iter(parse_sentinel)
-        self.assertIs(next(parse_sentinel), tokens.Content)
-        token = parse_sentinel.send(tokens.Content)
-        self.assertEqual(token.literal, 'more')
+        self.assertIsInstance(next(parse_sentinel), tokens.Content)
+        text = parse_sentinel.send(tokens.TextHolder())
+        self.assertEqual(text.literal(), 'more')
         with self.assertRaises(StopIteration) as stop:
             next(parse_sentinel)
         # Test that StopIteration indicates found is True
@@ -180,7 +180,7 @@ class SentinelParserTests(unittest.TestCase):
         s = ''
         buf = iterseq.IterableAsSequence([s])
         parse_sentinel = lex.SentinelParser()
-        parse_sentinel(buf, tokens.Content, '?>')
+        parse_sentinel(buf, tokens.Content(), '?>')
         parse_sentinel = iter(parse_sentinel)
         with self.assertRaises(StopIteration) as stop:
             next(parse_sentinel)
@@ -193,15 +193,15 @@ class SentinelParserTests(unittest.TestCase):
         s = 'morefix'
         buf = iterseq.IterableAsSequence([s])
         parse_sentinel = lex.SentinelParser()
-        parse_sentinel(buf, tokens.Content, '?>')
+        parse_sentinel(buf, tokens.Content(), '?>')
         parse_sentinel = iter(parse_sentinel)
-        self.assertIs(next(parse_sentinel), tokens.Content)
-        token = parse_sentinel.send(tokens.Content)
-        self.assertEqual(token.literal, 'morefix')
-        self.assertIs(next(parse_sentinel), tokens.Content)
-        token = parse_sentinel.send(tokens.Content)
-        self.assertEqual(token.literal, '')
-        self.assertIs(token.is_final, True)
+        self.assertIsInstance(next(parse_sentinel), tokens.Content)
+        text = parse_sentinel.send(tokens.TextHolder())
+        self.assertEqual(text.literal(), 'morefix')
+        self.assertIsInstance(next(parse_sentinel), tokens.Content)
+        text = parse_sentinel.send(tokens.TextHolder())
+        self.assertEqual(text.literal(), '')
+        self.assertIs(text.is_final, True)
         with self.assertRaises(StopIteration) as stop:
             next(parse_sentinel)
         # Test that StopIteration indicates found is False
@@ -213,15 +213,15 @@ class SentinelParserTests(unittest.TestCase):
         s = 'morefix?'
         buf = iterseq.IterableAsSequence([s])
         parse_sentinel = lex.SentinelParser()
-        parse_sentinel(buf, tokens.Content, '?>')
+        parse_sentinel(buf, tokens.Content(), '?>')
         parse_sentinel = iter(parse_sentinel)
-        self.assertIs(next(parse_sentinel), tokens.Content)
-        token = parse_sentinel.send(tokens.Content)
-        self.assertEqual(token.literal, 'morefix')
-        self.assertIs(next(parse_sentinel), tokens.Content)
-        token = parse_sentinel.send(tokens.Content)
-        self.assertEqual(token.literal, '?')
-        self.assertIs(token.is_final, True)
+        self.assertIsInstance(next(parse_sentinel), tokens.Content)
+        text = parse_sentinel.send(tokens.TextHolder())
+        self.assertEqual(text.literal(), 'morefix')
+        self.assertIsInstance(next(parse_sentinel), tokens.Content)
+        text = parse_sentinel.send(tokens.TextHolder())
+        self.assertEqual(text.literal(), '?')
+        self.assertIs(text.is_final, True)
         with self.assertRaises(StopIteration) as stop:
             next(parse_sentinel)
         # Test that StopIteration indicates found is False
@@ -230,7 +230,7 @@ class SentinelParserTests(unittest.TestCase):
         self.assertEqual(buf.get(), '')
 
 
-class TokenGeneratorMarkupTests(unittest.TestCase):
+class TokenScannerMarkupTests(unittest.TestCase):
 
     def scan(self, stream, expected_tokens):
         # Add fake sequence to end, to catch additional tokens being
@@ -240,19 +240,16 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         # print(self.id())
         expected_tokens.append((tokens.Token(),))
         buf = iterseq.IterableAsSequence(stream)
-        scanner = lex.TokenGenerator(buf)
-        token_types = iter(scanner)
-        for token_type, expected in zip(token_types, expected_tokens):
-            token = scanner.get_token(token_type)
-            # print(token_type, repr(token.literal), token.is_final)
-            literal = token.literal
-            while not token.is_final:
-                token_type2 = next(token_types)
-                # self.assertIs(token_type2.__class__, token_type.__class__)
-                token = token_types.send(token_type2)
-                # print(token_type2, repr(token.literal), token.is_final)
-                literal += token.literal
-                self.assertIs(token_type, expected[0], repr(literal))
+        scanner = lex.TokenScanner(buf)
+        token_stream = iter(scanner)
+        for token, expected in zip(token_stream, expected_tokens):
+            text = scanner.get_text(token)
+            # print(token, repr(text.literal()), text.is_final)
+            literal = text.literal()
+            while not text.is_final:
+                text = scanner.get_text(next(token_stream))
+                literal += text.literal()
+                self.assertIsInstance(token, expected[0], repr(literal))
             self.assertEqual(literal, expected[1])
         self.assertEqual(buf.get(), '')
         # print()
@@ -480,16 +477,16 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
         # has attribute ``is_well_formed`` set to False for the < character
         xml = '<-- hello -->'
         expected_tokens = [
-            (tokens.BadlyFormedLessThanToken, '<', False),
+            (tokens.Content, '<', False),
             (tokens.PCData, '-- hello -->', True),
             ]
         buf = iterseq.IterableAsSequence([xml])
-        token_types = lex.TokenGenerator(buf)
-        for token_type, expected in zip(token_types, expected_tokens):
-            token = token_types.get_token(token_type)
-            self.assertEqual(token_type, expected[0])
-            self.assertEqual(token.literal, expected[1])
-            self.assertIs(token_type.is_well_formed, expected[2])
+        token_stream = lex.TokenScanner(buf)
+        for token, expected in zip(token_stream, expected_tokens):
+            text = token_stream.get_text(token)
+            self.assertIsInstance(token, expected[0])
+            self.assertEqual(text.literal(), expected[1])
+            self.assertIs(isinstance(token, tokens.WellFormed), expected[2])
 
     def test_processing_instruction(self):
         xml = "<?xml foo bar?>"
@@ -514,7 +511,7 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_short_processing_instruction(self):
         xml = "<?"
         expected_tokens = [
-            (tokens.BadlyFormedLessThanToken, '<'),
+            (tokens.Content, '<'),
             (tokens.PCData, '?'),
             ]
         self.scan([xml], expected_tokens)
@@ -572,19 +569,16 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
     def test_invalid_processing_instruction(self):
         xml = '<??>'
         buf = iterseq.IterableAsSequence([xml])
-        scanner = lex.TokenGenerator(buf)
-        token_types = iter(scanner)
+        scanner = lex.TokenScanner(buf)
+        token_stream = iter(scanner)
         well_formed = True
         s = ''
-        for token_type in token_types:
-            if not token_type.is_well_formed:
+        for token in token_stream:
+            if not isinstance(token, tokens.WellFormed):
                 well_formed = False
-            if token_type.is_token:
-                token = token_type
-            else:
-                token = token_types.send(token_type)
-            if token_type.is_content:
-                s += token.content
+            if isinstance(token, tokens.Content):
+                text = scanner.get_text(token)
+                s += text.content()
         self.assertFalse(well_formed)
         self.assertEqual(s, xml)
 
@@ -630,13 +624,54 @@ class TokenGeneratorMarkupTests(unittest.TestCase):
             'ome>text'
             ]
         buf = iterseq.IterableAsSequence(xml)
-        scanner = lex.TokenGenerator(buf)
+        scanner = lex.TokenScanner(buf)
         literal = ''
         content = ''
-        for token_type in scanner:
-            token = scanner.get_token(token_type)
-            literal += token.literal
-            if token_type.is_content:
-                content += token.content
+        for token in scanner:
+            text = scanner.get_text(token)
+            literal += text.literal()
+            if isinstance(token, tokens.Content):
+                content += text.content()
         self.assertEqual(literal, ''.join(xml))
         self.assertEqual(content, 'This issome text')
+
+    def test_attribute_colon(self):
+        xml = '<tag na:me="value">'
+        expected_tokens = [
+            (tokens.StartOrEmptyTagOpen, '<'),
+            (tokens.TagName, 'tag'),
+            (tokens.MarkupWhitespace, ' '),
+            (tokens.AttributeName, 'na:me'),
+            (tokens.AttributeEquals, '='),
+            (tokens.AttributeValueDoubleOpen, '"'),
+            (tokens.AttributeValue, 'value'),
+            (tokens.AttributeValueClose, '"'),
+            (tokens.StartTagClose, '>'),
+            ]
+        self.scan([xml], expected_tokens)
+
+
+class TestRead(unittest.TestCase):
+
+    def test_content_tokens_1(self):
+        """README example 1"""
+        string_iter = ['Hello, ', 'World!']
+        result = []
+        token_stream = lex.TokenScanner.from_strings(string_iter)
+        for token in token_stream:
+            if isinstance(token, tokens.Content):
+                text = token_stream.get_text(token)
+                result.append(text.content())
+        self.assertEqual(''.join(string_iter), ''.join(result))
+
+    def test_content_tokens_2(self):
+        """README example 2"""
+        string_iter = ['Hello, ', 'World!']
+        result = []
+        holder = tokens.TextHolder()
+        token_stream = lex.TokenScanner.from_strings(string_iter)
+        for token in token_stream:
+            if isinstance(token, tokens.Content):
+                text = token_stream.get_text(token, holder)
+                result.append(text.content())
+        self.assertEqual(''.join(string_iter), ''.join(result))

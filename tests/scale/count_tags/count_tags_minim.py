@@ -1,15 +1,15 @@
 import sys
 
-import minim.read
+import minim.lex
 import minim.tokens
 
 
 def run(doc):
     start_element = minim.tokens.StartOrEmptyTagOpen
     count = 0
-    token_types = minim.read.Reader(doc)
-    for token_type in token_types:
-        if token_type.is_a(start_element):
+    scanner = minim.lex.TokenScanner.from_strings(doc)
+    for token in scanner:
+        if isinstance(token, start_element):
             count += 1
     return count
 
