@@ -1,5 +1,3 @@
-import abc
-
 
 class EmptyTextHolderException(Exception):
 
@@ -58,7 +56,7 @@ class TextHolder:
         return self.literal()
 
 
-class Token(metaclass=abc.ABCMeta):
+class Token:
 
     def __init__(self, text=None):
         self.is_token = True
@@ -79,7 +77,7 @@ class Token(metaclass=abc.ABCMeta):
         return issubclass(cls, token)
 
 
-class WellFormed(metaclass=abc.ABCMeta):
+class WellFormed:
     pass
 
 

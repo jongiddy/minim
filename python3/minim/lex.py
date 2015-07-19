@@ -12,8 +12,6 @@ send() calls, this also allows us to separate these two calls (in a
 real generator, they are all in the same function).  The price to pay is
 the need to operate a state machine.
 """
-import abc
-from collections.abc import Iterable, Iterator
 import re
 
 from minim import iterseq, tokens
@@ -60,7 +58,7 @@ _AttributeNameToken = tokens.AttributeName()
 _AttributeValueToken = tokens.AttributeValue()
 
 
-class SentinelParser(Iterator):
+class SentinelParser:
 
     """A non-allocating iterator for a sentinel.
 
@@ -81,7 +79,7 @@ class SentinelParser(Iterator):
         self.needs_final = False
         self.is_initial = True
         self.is_final = False
-        return super().__iter__()
+        return self
 
     def __next__(self):
         if self.stopped is not None:
@@ -120,7 +118,7 @@ class SentinelParser(Iterator):
         return text
 
 
-class LiteralResponder(Iterator):
+class LiteralResponder:
 
     """A non-allocating iterator for a literal value."""
 
@@ -143,7 +141,7 @@ class LiteralResponder(Iterator):
         return text
 
 
-class PatternParser(Iterator):
+class PatternParser:
 
     """A non-allocating iterator for a regex pattern."""
 
@@ -161,7 +159,7 @@ class PatternParser(Iterator):
         self.found = False
         self.is_initial = True
         self.is_final = False
-        return super().__iter__()
+        return self
 
     def __next__(self):
         if self.stopped is not None:
@@ -225,12 +223,11 @@ class NmTokenParser(PatternParser):
         return bool(self.name_initial_pattern.match(s))
 
 
-class GeneratesTokens(Iterable, metaclass=abc.ABCMeta):
+class GeneratesTokens:
 
     """An iterable that yields token types, and provides a method to
     obtain the token matching the token type."""
 
-    @abc.abstractmethod
     def next(self):
         """Return the current token type in the input stream.
 
@@ -242,7 +239,6 @@ class GeneratesTokens(Iterable, metaclass=abc.ABCMeta):
         a token.  In some caes, this just returns the same instance.
         """
 
-    @abc.abstractmethod
     def token_to_text(self, token, text_holder):
         """Obtain the text for the current token.
 
@@ -295,7 +291,6 @@ class SendBasedTokenScanner(GeneratesTokens):
         self.generator = self.create_generator()
         return self.generator
 
-    @abc.abstractmethod
     def create_generator(self):
         pass
 
@@ -323,7 +318,6 @@ class BufferBasedTokenScanner(GeneratesTokens):
         self.generator = self.create_generator()
         return self.generator
 
-    @abc.abstractmethod
     def create_generator(self):
         pass
 

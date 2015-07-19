@@ -1,7 +1,10 @@
 Count the number of tags in a file. This includes all start and empty tags, but
 not the end tags.
 
-Timings as of 2015-05-25:
+Note, on Ubuntu 14.04 with Python 3.4.0, the `-O` flag made the first 3 tests, using existing libraries, slightly slower than without the flag.
+Hence, they have been done without the `-O` flag.
+
+Timings as of 2015-07-19:
 
 ```
 $ time PYTHONPATH=${MINIM_HOME}/python3 python3 count_tags_etree_lxml.py ../xml/gb_20140923.xml
@@ -25,29 +28,22 @@ real    0m7.941s
 user    0m7.930s
 sys     0m0.012s
 
-$ time PYTHONPATH=${MINIM_HOME}/python3 python3 count_tags_minim.py ../xml/gb_20140923.xml
+$ time PYTHONPATH=${MINIM_HOME}/python3 python3 -O count_tags_minim.py ../xml/gb_20140923.xml
 222392
 
-real    0m23.091s
-user    0m23.098s
-sys     0m0.007s
-
-$ time PYTHONPATH=${MINIM_HOME}/python3 python3 count_tags_minim_simple.py ../xml/gb_20140923.xml
-222392
-
-real    0m32.853s
-user    0m32.861s
-sys     0m0.005s
-
-$ time PYTHONPATH=${MINIM_HOME}/python3 python3 -O count_tags_minim_ns.py ../xml/gb_20140923.xml
-222392
-
-real	0m33.088s
-user	0m32.816s
+real	0m14.397s
+user	0m14.363s
 sys		0m0.029s
 
 
-(with abc removed)
+$ time PYTHONPATH=${MINIM_HOME}/python3 python3 -O count_tags_minim_simple.py ../xml/gb_20140923.xml
+222392
+
+real	0m20.899s
+user	0m20.863s
+sys		0m0.013s
+
+
 $ time PYTHONPATH=${MINIM_HOME}/python3 python3 -O count_tags_minim_ns.py ../xml/gb_20140923.xml
 222392
 
