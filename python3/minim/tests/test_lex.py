@@ -650,6 +650,22 @@ class TokenScannerMarkupTests(unittest.TestCase):
             ]
         self.scan([xml], expected_tokens)
 
+    def test_attribute_no_space_error(self):
+        xml = '<tag foo="value"bar="value">'
+        with self.assertRaises(RuntimeError):
+            expected_tokens = [
+                (tokens.StartOrEmptyTagOpen, '<'),
+                (tokens.TagName, 'tag'),
+                (tokens.MarkupWhitespace, ' '),
+                (tokens.AttributeName, 'foo'),
+                (tokens.AttributeEquals, '='),
+                (tokens.AttributeValueDoubleOpen, '"'),
+                (tokens.AttributeValue, 'value'),
+                (tokens.AttributeValueClose, '"'),
+                (tokens.AttributeName, 'bar'),
+                ]
+            self.scan([xml], expected_tokens)
+
 
 class TestRead(unittest.TestCase):
 

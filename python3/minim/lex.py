@@ -460,12 +460,7 @@ class TokenScanner(BufferBasedTokenScanner):
                 ws_found = yield from self.parse_space(
                     buf, _MarkupWhitespaceToken)
                 ch = buf.get()
-                while ch not in ('', '>', '/'):
-                    if not ws_found:
-                        raise RuntimeError(
-                            'Expected whitespace, >, or />, found %r' % ch)
-                    if not self.name_parser.matches_initial(ch):
-                        raise RuntimeError('Expected attribute name')
+                while ws_found and self.name_parser.matches_initial(ch):
                     yield from self.parse_name(buf, _AttributeNameToken)
                     yield from self.parse_space(buf, _MarkupWhitespaceToken)
                     ch = buf.get()
@@ -506,8 +501,7 @@ class TokenScanner(BufferBasedTokenScanner):
                 elif ch == '>':
                     yield _StartTagCloseTextToken
                     buf.advance()
-                else:
-                    assert ch == '/'
+                elif ch == '/':
                     ch = buf.next()
                     if not ch:
                         yield tokens.BadlyFormedEndOfStream(
@@ -517,6 +511,9 @@ class TokenScanner(BufferBasedTokenScanner):
                         raise RuntimeError('Expected />')
                     yield _EmptyTagCloseTextToken
                     buf.advance()
+                else:
+                    raise RuntimeError(
+                        'Expected whitespace, >, or />, found %r' % ch)
             else:
                 # < does not appear to be well-formed markup - treat it
                 # as a content character
