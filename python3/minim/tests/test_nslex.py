@@ -179,6 +179,27 @@ class NamespaceTokenScannerMarkupTests(unittest.TestCase):
             ]
         self.scan([xml], expected_tokens)
 
+    def test_open_tags_refined(self):
+        """Test that scanner refines tag to specify open or empty.
+
+        Since the NamespaceTokenScanner must parse the entire tag before
+        emitting any tokens, it has the opportunity to convert an
+        ambiguous StartOrEmptyTagOpen to a specific StartTagOpen or
+        EmptyTagOpen token.
+        """
+        xml = "<tag>some content<another />"
+        expected_tokens = [
+            (tokens.StartTagOpen, '<'),
+            (tokens.TagName, 'tag'),
+            (tokens.StartTagClose, '>'),
+            (tokens.PCData, 'some content'),
+            (tokens.EmptyTagOpen, '<'),
+            (tokens.TagName, 'another'),
+            (tokens.MarkupWhitespace, ' '),
+            (tokens.EmptyTagClose, '/>'),
+            ]
+        self.scan([xml], expected_tokens)
+
     def test_literal_ok(self):
         xml = [
             '<?xml version="1.0"?><tns:some tags="',

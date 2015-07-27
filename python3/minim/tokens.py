@@ -156,7 +156,27 @@ class CommentData(MarkupData):
 
 
 class StartOrEmptyTagOpen(MarkupStructure):
-    pass
+
+    def refine(self, close_tag_token):
+        """Change an ambiguous tag into a specific tag."""
+        if isinstance(close_tag_token, StartOrEmptyTagClose):
+            tag_open_class = close_tag_token.get_tag_open_class()
+            return tag_open_class(self.text)
+        else:
+            # e.g. BadlyFormedEOF
+            return self
+
+
+class StartTagOpen(StartOrEmptyTagOpen):
+
+    def refine(self, close_tag_token):
+        return self
+
+
+class EmptyTagOpen(StartOrEmptyTagOpen):
+
+    def refine(self, close_tag_token):
+        return self
 
 
 class EndTagOpen(MarkupStructure):
@@ -192,15 +212,21 @@ class AttributeValueSingleClose(AttributeValueClose):
 
 
 class StartOrEmptyTagClose(MarkupStructure):
-    pass
+
+    def get_tag_open_class(self):
+        raise NotImplementedError()
 
 
 class StartTagClose(StartOrEmptyTagClose):
-    pass
+
+    def get_tag_open_class(self):
+        return StartTagOpen
 
 
 class EmptyTagClose(StartOrEmptyTagClose):
-    pass
+
+    def get_tag_open_class(self):
+        return EmptyTagOpen
 
 
 class EndTagClose(MarkupStructure):

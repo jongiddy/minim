@@ -52,7 +52,8 @@ class NamespaceTokenScanner(lex.SendBasedTokenScanner):
         cached_tokens = []
         for token in token_stream:
             if isinstance(token, tokens.StartOrEmptyTagOpen):
-                cached_tokens = [token.clone(token_stream.get_text(token))]
+                start_token = token.clone(token_stream.get_text(token))
+                cached_tokens = []
                 token = token_stream.next()
                 while not isinstance(token, tokens.StartOrEmptyTagClose):
                     if isinstance(token, tokens.AttributeName):
@@ -126,6 +127,7 @@ class NamespaceTokenScanner(lex.SendBasedTokenScanner):
                         cached_tokens.append(
                             token.clone(token_stream.get_text(token)))
                         token = token_stream.next()
+                yield start_token.refine(token)
                 yield from cached_tokens
             # Standard way to pass tokens through:
             text = yield token
