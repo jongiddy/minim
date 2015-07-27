@@ -31,25 +31,25 @@ sys     0m0.012s
 $ time PYTHONPATH=${MINIM_HOME}/python3 python3 -O count_tags_minim.py ../xml/gb_20140923.xml
 222392
 
-real	0m14.397s
-user	0m14.363s
-sys		0m0.029s
+real    0m14.397s
+user    0m14.363s
+sys     0m0.029s
 
 
 $ time PYTHONPATH=${MINIM_HOME}/python3 python3 -O count_tags_minim_simple.py ../xml/gb_20140923.xml
 222392
 
-real	0m20.899s
-user	0m20.863s
-sys		0m0.013s
+real    0m20.899s
+user    0m20.863s
+sys     0m0.013s
 
 
 $ time PYTHONPATH=${MINIM_HOME}/python3 python3 -O count_tags_minim_ns.py ../xml/gb_20140923.xml
 222392
 
-real	0m21.564s
-user	0m21.570s
-sys		0m0.004s
+real    0m21.564s
+user    0m21.570s
+sys     0m0.004s
 
 ```
 

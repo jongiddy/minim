@@ -17,7 +17,7 @@ token_stream = minim.lex.TokenScanner.from_strings(string_iter)
 for token in token_stream:
     text = token_stream.get_text(token)
     if token.is_content:
-		sys.stdout.write(text.content())
+        sys.stdout.write(text.content())
 ```
 
 Since the text is only used if the token is content,
@@ -31,7 +31,7 @@ token_stream = minim.lex.TokenScanner.from_strings(string_iter)
 for token in token_stream:
     if token.is_content:
         text = token_stream.get_text(token)
-		sys.stdout.write(text.content())
+        sys.stdout.write(text.content())
 ```
 
 To reduce memory allocation further,
@@ -44,7 +44,7 @@ token_stream = minim.lex.TokenScanner.from_strings(string_iter)
 for token in token_stream:
     if token.is_content:
         text = token_stream.get_text(token, holder)
-		sys.stdout.write(text.content())
+        sys.stdout.write(text.content())
 ```
 
 This allocates a single TextHolder class,
