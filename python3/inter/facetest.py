@@ -1,7 +1,7 @@
-import minter
+import inter
 
 
-class IFoo(minter.Face):
+class IFoo(inter.Face):
 
     """Foo blah blah"""
 

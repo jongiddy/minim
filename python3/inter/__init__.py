@@ -1,5 +1,5 @@
-from minter.face import Face
+from ._face import face
 
 __all__ = [
-    'Face'
+    'face'
 ]

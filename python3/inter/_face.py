@@ -1,4 +1,4 @@
-class Face:
+class face:
 
     __mapping = {}
 
@@ -9,16 +9,16 @@ class Face:
     def implementation(face, cls):
         if __debug__:
             for icls in face.mro():
-                if icls.__class__ is Face:
+                if icls.__class__ is face:
                     # No more subclasses
                     break
-                elif issubclass(icls, Face):
-                    classes = Face.__mapping.setdefault(icls, ())
+                elif issubclass(icls, face):
+                    classes = face.__mapping.setdefault(icls, ())
                     for existing in classes:
                         if issubclass(cls, existing):
                             break
                     else:
-                        Face.__mapping[icls] = classes + (cls,)
+                        face.__mapping[icls] = classes + (cls,)
 
     @classmethod
     def cast(face, provider):
@@ -30,7 +30,7 @@ class Face:
             if isinstance(provider, face):
                 # provider is a subclass interface
                 return face(provider)
-            if isinstance(provider, Face.__mapping[face]):
+            if isinstance(provider, face.__mapping[face]):
                 return face(provider)
             raise TypeError(
                 'Object {} does not support interface {}'. format(
