@@ -1,7 +1,7 @@
 import inter
 
 
-class IFoo(inter.Face):
+class IFoo(inter.face):
 
     """Foo blah blah"""
 
@@ -12,7 +12,7 @@ class IFoo(inter.Face):
         print(1)
 
 
-class Foo:
+class Foo(IFoo.Provider):
 
     def __init__(self, x=None):
         self.x = x
@@ -26,8 +26,6 @@ class Foo:
 
     def __repr__(self):
         return "Foo(%s)" % self.x
-
-IFoo.implementation(Foo)
 
 
 f = Foo(3)
