@@ -24,25 +24,22 @@ class InterfaceMetaclass(type):
         # Calling Interface(object) will call this function first.  We
         # get a chance to return the same object if suitable.
         """Cast the object to this interface."""
-        if __debug__:
-            if provider.__class__ is interface:
-                # If the cast object is this interface, just return
-                # the same interface.
-                return provider
-            if isinstance(provider, interface):
-                # If the cast object is a subclass of this face, create
-                # a wrapper object
-                return type.__call__(interface, provider)
-            if isinstance(provider, interface.Provider):
-                # If the cast object provides this interface,
-                for name in interface.attributes:
-                    getattr(provider, name)
-                return type.__call__(interface, provider)
-            raise TypeError(
-                'Object {} does not support interface {}'. format(
-                    provider, interface.__name__))
-        # If  we are optimised, just return the object
-        return provider
+        if provider.__class__ is interface:
+            # If the cast object is this interface, just return
+            # the same interface.
+            return provider
+        if isinstance(provider, interface):
+            # If the cast object is a subclass of this face, create
+            # a wrapper object
+            return type.__call__(interface, provider)
+        if isinstance(provider, interface.Provider):
+            # If the cast object provides this interface,
+            for name in interface.attributes:
+                getattr(provider, name)
+            return type.__call__(interface, provider)
+        raise TypeError(
+            'Object {} does not support interface {}'. format(
+                provider, interface.__name__))
 
 
 class Interface(object, metaclass=InterfaceMetaclass):
