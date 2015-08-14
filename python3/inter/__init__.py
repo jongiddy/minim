@@ -1,5 +1,8 @@
-from ._face import Interface as face
+from ._face import Interface
+
+face = Interface
 
 __all__ = [
-    'face'
+    'Interface',
+    'face',
 ]
