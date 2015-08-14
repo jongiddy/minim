@@ -1,3 +1,5 @@
 *.pyc
+*.pyo
+__pycache__/
 tests/scale/xml/gb_20140923.xml
 tests/scale/xml/xmark.xml.gz
