@@ -86,3 +86,28 @@ class InterfaceTests(unittest.TestCase):
                 IFooBar(obj)
         else:
             IFooBar(obj)
+
+    def test_iterator_ok(self):
+        class Iterator(inter.face):
+            # Do not define special methods in an Interface.
+            pass
+
+        class XIterator(Iterator.Provider):
+
+            def __init__(self):
+                self.x = [1, 2, 3]
+
+            def __iter__(self):
+                return self
+
+            def __next__(self):
+                if self.x:
+                    return self.x.pop(0)
+                else:
+                    raise StopIteration()
+
+        xiter = XIterator()
+        result = []
+        for i in Iterator(xiter):
+            result.append(i)
+        self.assertEqual(result, [1, 2, 3])

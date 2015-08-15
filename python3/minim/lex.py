@@ -14,6 +14,7 @@ the need to operate a state machine.
 """
 import re
 
+import inter
 from minim import iterseq, tokens
 
 
@@ -223,7 +224,7 @@ class NmTokenParser(PatternParser):
         return bool(self.name_initial_pattern.match(s))
 
 
-class GeneratesTokens:
+class GeneratesTokens(inter.face):
 
     """An iterable that yields token types, and provides a method to
     obtain the token matching the token type."""
@@ -243,6 +244,9 @@ class GeneratesTokens:
         """Obtain the text for the current token.
 
         This method does the work of turning a token into text."""
+
+
+class BaseTokenScanner(GeneratesTokens.Provider):
 
     def get_text(self, token, text_holder=None):
         """Return the current text in the input stream.
@@ -279,7 +283,7 @@ class GeneratesTokens:
         return text
 
 
-class SendBasedTokenScanner(GeneratesTokens):
+class SendBasedTokenScanner(BaseTokenScanner):
 
     """An iterable that yields token types, and responds to send()
     with the token matching the token type."""
@@ -301,7 +305,7 @@ class SendBasedTokenScanner(GeneratesTokens):
         return self.generator.send(text_holder)
 
 
-class BufferBasedTokenScanner(GeneratesTokens):
+class BufferBasedTokenScanner(BaseTokenScanner):
 
     """An iterable that yields token types, and uses buffer state to
     return the token matching the token type.

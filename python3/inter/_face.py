@@ -89,6 +89,7 @@ class InterfaceMetaclass(type):
             pass
         interface.Provider = InterfaceProvider
         interface.attributes = [key for key in dct if not key.startswith('__')]
+        print(interface.attributes)
 
     def __call__(interface, provider):
         # Calling Interface(object) will call this function first.  We
@@ -127,9 +128,14 @@ class Interface(object, metaclass=InterfaceMetaclass):
         it from the wrapped object.
         """
         my = super().__getattribute__
-        if name in my('attributes'):
+        if name.startswith('__') or name in my('attributes'):
             return getattr(my('provider'), name)
         else:
             raise AttributeError(
                 "{!r} interface has no attribute {!r}".format(
                     my('__class__').__name__, name))
+
+    # Special methods do not go through __getattribute__
+    def __iter__(self):
+        my = super().__getattribute__
+        return my('provider').__iter__()
