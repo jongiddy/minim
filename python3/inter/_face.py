@@ -71,10 +71,9 @@ interface.  Hence, ``sys.stdout`` cannot be indicated as satisfying the
 
 class InterfaceMetaclass(type):
 
-    def __init__(interface, name, bases, dct):
+    def __new__(meta, name, bases, dct):
         # Called when a new class is defined.  Use the dictionary of
         # declared attributes to create a mapping to the wrapped object
-        type.__init__(interface, name, bases, {})
         BaseInterfaceProviders = []
         for base in bases:
             if base is not object and issubclass(base, Interface):
@@ -87,9 +86,30 @@ class InterfaceMetaclass(type):
             # classes of super-interfaces, it also indicates that the
             # class implements those interfaces as well.
             pass
-        interface.Provider = InterfaceProvider
-        interface.attributes = [key for key in dct if not key.startswith('__')]
-        print(interface.attributes)
+        required = {}
+        attributes = set()
+        for key, value in dct.items():
+            if key in ('__module__', '__qualname__'):
+                required[key] = value
+                pass
+            elif key in ('__init__', '__getattribute__'):
+                required[key] = value
+            elif key.startswith('__'):
+                # pass-through special methods, which bypass getattribute
+                def create_proxy_function(name):
+                    def proxy_function(self, *args, **kw):
+                        my = object.__getattribute__
+                        method = getattr(my(self, 'provider'), name)
+                        return method(*args, **kw)
+                    return proxy_function
+                required[key] = create_proxy_function(key)
+                attributes.add(key)
+            else:
+                attributes.add(key)
+        required['Provider'] = InterfaceProvider
+        required['attributes'] = attributes
+        interface = super().__new__(meta, name, bases, required)
+        return interface
 
     def __call__(interface, provider):
         # Calling Interface(object) will call this function first.  We
@@ -102,12 +122,12 @@ class InterfaceMetaclass(type):
         if isinstance(provider, interface):
             # If the cast object is a subclass of this face, create
             # a wrapper object
-            return type.__call__(interface, provider)
+            return super().__call__(provider)
         if isinstance(provider, interface.Provider):
             # If the cast object provides this interface,
             for name in interface.attributes:
                 getattr(provider, name)
-            return type.__call__(interface, provider)
+            return super().__call__(provider)
         raise TypeError(
             'Object {} does not support interface {}'. format(
                 provider, interface.__name__))
@@ -128,14 +148,9 @@ class Interface(object, metaclass=InterfaceMetaclass):
         it from the wrapped object.
         """
         my = super().__getattribute__
-        if name.startswith('__') or name in my('attributes'):
+        if name in my('attributes'):
             return getattr(my('provider'), name)
         else:
             raise AttributeError(
                 "{!r} interface has no attribute {!r}".format(
                     my('__class__').__name__, name))
-
-    # Special methods do not go through __getattribute__
-    def __iter__(self):
-        my = super().__getattribute__
-        return my('provider').__iter__()

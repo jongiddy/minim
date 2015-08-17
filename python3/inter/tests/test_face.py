@@ -89,8 +89,12 @@ class InterfaceTests(unittest.TestCase):
 
     def test_iterator_ok(self):
         class Iterator(inter.face):
-            # Do not define special methods in an Interface.
-            pass
+
+            def __iter__(self):
+                pass
+
+            def __next__(self):
+                pass
 
         class XIterator(Iterator.Provider):
 
