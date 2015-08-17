@@ -71,6 +71,12 @@ interface.  Hence, ``sys.stdout`` cannot be indicated as satisfying the
 
 class InterfaceMetaclass(type):
 
+    KEPT = frozenset((
+        '__module__', '__qualname__',
+        '__init__', '__del__',
+        '__getattribute__',
+    ))
+
     def __new__(meta, name, bases, dct):
         # Called when a new class is defined.  Use the dictionary of
         # declared attributes to create a mapping to the wrapped object
@@ -86,29 +92,44 @@ class InterfaceMetaclass(type):
             # classes of super-interfaces, it also indicates that the
             # class implements those interfaces as well.
             pass
-        required = {}
-        attributes = set()
+        instance_attributes = {}
+        object_attributes = set()
         for key, value in dct.items():
-            if key in ('__module__', '__qualname__'):
-                required[key] = value
-                pass
-            elif key in ('__init__', '__getattribute__'):
-                required[key] = value
+            # Almost all attributes on the interface are mapped to
+            # return the equivalent attributes on the wrapped object.
+            if key in meta.KEPT:
+                # A few attributes need to be kept pointing to the
+                # interface object.
+                instance_attributes[key] = value
             elif key.startswith('__'):
-                # pass-through special methods, which bypass getattribute
+                # Special methods, e.g. __iter__, can be called
+                # directly on an instance without going through
+                # __getattribute__.  For example, `for i in x:` will
+                # call x.__iter__() without resolving the name in the
+                # usual way.  Hence, we need to create these functions
+                # directly on the class.
                 def create_proxy_function(name):
+                    # Creating the function inside another function
+                    # creates a closure in which `name` stays set to its
+                    # current value, for use inside the inner function.
                     def proxy_function(self, *args, **kw):
                         my = object.__getattribute__
                         method = getattr(my(self, 'provider'), name)
                         return method(*args, **kw)
                     return proxy_function
-                required[key] = create_proxy_function(key)
-                attributes.add(key)
+                instance_attributes[key] = create_proxy_function(key)
+                # Also add the name to `instance_attributes` to ensure that
+                # `__getattribute__` does not reject the name for the
+                # cases where Python does go through the usual process,
+                # e.g. getattr(x, '__iter__')
+                object_attributes.add(key)
             else:
-                attributes.add(key)
-        required['Provider'] = InterfaceProvider
-        required['attributes'] = attributes
-        interface = super().__new__(meta, name, bases, required)
+                # All other attributes are simply mapped using
+                # `__getattribute__`.
+                object_attributes.add(key)
+        instance_attributes['Provider'] = InterfaceProvider
+        instance_attributes['object_attributes'] = object_attributes
+        interface = super().__new__(meta, name, bases, instance_attributes)
         return interface
 
     def __call__(interface, provider):
@@ -121,11 +142,13 @@ class InterfaceMetaclass(type):
             return provider
         if isinstance(provider, interface):
             # If the cast object is a subclass of this face, create
-            # a wrapper object
+            # a wrapper object.
             return super().__call__(provider)
         if isinstance(provider, interface.Provider):
-            # If the cast object provides this interface,
-            for name in interface.attributes:
+            # If the cast object provides this interface, test that the
+            # object has all required attributes and create a wrapper
+            # object.
+            for name in interface.object_attributes:
                 getattr(provider, name)
             return super().__call__(provider)
         raise TypeError(
@@ -148,7 +171,7 @@ class Interface(object, metaclass=InterfaceMetaclass):
         it from the wrapped object.
         """
         my = super().__getattribute__
-        if name in my('attributes'):
+        if name in my('object_attributes'):
             return getattr(my('provider'), name)
         else:
             raise AttributeError(
