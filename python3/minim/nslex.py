@@ -36,7 +36,9 @@ class NamespaceTokenScanner(lex.SendBasedTokenScanner):
 
     def __init__(self, token_generator):
         super().__init__()
-        self.token_generator = lex.TokenSequence(token_generator)
+        if __debug__:
+            token_generator = lex.TokenSequence(token_generator)
+        self.token_generator = token_generator
         self.xmlns_name_limit = 512
         self.xmlns_url_limit = 2048
 
