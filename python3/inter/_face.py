@@ -121,7 +121,7 @@ class InterfaceMetaclass(type):
                 # Also add the name to `instance_attributes` to ensure that
                 # `__getattribute__` does not reject the name for the
                 # cases where Python does go through the usual process,
-                # e.g. getattr(x, '__iter__')
+                # e.g. x.__iter__
                 object_attributes.add(key)
             else:
                 # All other attributes are simply mapped using
