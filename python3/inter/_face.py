@@ -92,15 +92,15 @@ class InterfaceMetaclass(type):
             # classes of super-interfaces, it also indicates that the
             # class implements those interfaces as well.
             pass
-        instance_attributes = {}
-        object_attributes = set()
+        class_attributes = {}
+        provider_attributes = set()
         for key, value in dct.items():
             # Almost all attributes on the interface are mapped to
             # return the equivalent attributes on the wrapped object.
             if key in meta.KEPT:
                 # A few attributes need to be kept pointing to the
                 # interface object.
-                instance_attributes[key] = value
+                class_attributes[key] = value
             elif key.startswith('__'):
                 # Special methods, e.g. __iter__, can be called
                 # directly on an instance without going through
@@ -117,19 +117,19 @@ class InterfaceMetaclass(type):
                         method = getattr(my(self, 'provider'), name)
                         return method(*args, **kw)
                     return proxy_function
-                instance_attributes[key] = create_proxy_function(key)
-                # Also add the name to `instance_attributes` to ensure that
+                class_attributes[key] = create_proxy_function(key)
+                # Also add the name to `class_attributes` to ensure that
                 # `__getattribute__` does not reject the name for the
                 # cases where Python does go through the usual process,
                 # e.g. x.__iter__
-                object_attributes.add(key)
+                provider_attributes.add(key)
             else:
                 # All other attributes are simply mapped using
                 # `__getattribute__`.
-                object_attributes.add(key)
-        instance_attributes['Provider'] = InterfaceProvider
-        instance_attributes['object_attributes'] = object_attributes
-        interface = super().__new__(meta, name, bases, instance_attributes)
+                provider_attributes.add(key)
+        class_attributes['Provider'] = InterfaceProvider
+        class_attributes['provider_attributes'] = provider_attributes
+        interface = super().__new__(meta, name, bases, class_attributes)
         return interface
 
     def __call__(interface, provider):
@@ -148,12 +148,17 @@ class InterfaceMetaclass(type):
             # If the cast object provides this interface, test that the
             # object has all required attributes and create a wrapper
             # object.
-            for name in interface.object_attributes:
+            for name in interface.provider_attributes:
                 getattr(provider, name)
             return super().__call__(provider)
         raise TypeError(
             'Object {} does not support interface {}'. format(
                 provider, interface.__name__))
+
+    def provided_by(interface, obj):
+        return (
+            isinstance(obj, interface) or isinstance(obj, interface.Provider)
+        )
 
 
 class Interface(object, metaclass=InterfaceMetaclass):
@@ -171,7 +176,7 @@ class Interface(object, metaclass=InterfaceMetaclass):
         it from the wrapped object.
         """
         my = super().__getattribute__
-        if name in my('object_attributes'):
+        if name in my('provider_attributes'):
             return getattr(my('provider'), name)
         else:
             raise AttributeError(
