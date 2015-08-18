@@ -224,10 +224,13 @@ class NmTokenParser(PatternParser):
         return bool(self.name_initial_pattern.match(s))
 
 
-class GeneratesTokens(inter.face):
+class TokenSequence(inter.face):
 
     """An iterable that yields token types, and provides a method to
     obtain the token matching the token type."""
+
+    def __iter__(self):
+        """Return an iterator over the tokens."""
 
     def next(self):
         """Return the current token type in the input stream.
@@ -240,13 +243,39 @@ class GeneratesTokens(inter.face):
         a token.  In some caes, this just returns the same instance.
         """
 
-    def token_to_text(self, token, text_holder):
-        """Obtain the text for the current token.
+    def get_text(self, token, text_holder=None):
+        """Return the current text in the input stream.
 
-        This method does the work of turning a token into text."""
+        If the token type is of interest to the processor, calling this
+        method will return the actual text, which can be processed
+        further.
+
+        If the optional ``text_holder`` parameter is not provided, this
+        will usually allocate a new Text instance.
+
+        If the optional ``text_holder`` parameter is provided, this
+        function **may** choose to use the provided (subclass of)
+        ``TextHolder`` as the returned text.  This allows the
+        opportunity for the system to avoid allocating memory for the
+        text.
+
+        Note that this method is not required to use the provided text
+        holder, so the return value must be used for subsequent
+        processing of the text.
+
+        :param token: A Token returned from the iterator
+        :param text_holder: An optional TextHolder that can be set
+        :return: The current text in the input stream
+        :rtype: minim.tokens.TextHolder
+        """
+
+    # def token_to_text(self, token, text_holder):
+    #     """Obtain the text for the current token.
+
+    #     This method does the work of turning a token into text."""
 
 
-class BaseTokenScanner(GeneratesTokens.Provider):
+class BaseTokenScanner(TokenSequence.Provider):
 
     def get_text(self, token, text_holder=None):
         """Return the current text in the input stream.
