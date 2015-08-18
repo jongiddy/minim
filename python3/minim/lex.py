@@ -269,38 +269,42 @@ class TokenSequence(inter.face):
         :rtype: minim.tokens.TextHolder
         """
 
-    # def token_to_text(self, token, text_holder):
-    #     """Obtain the text for the current token.
 
-    #     This method does the work of turning a token into text."""
+class TokenGenerating(inter.face):
+
+    def create_generator(self):
+        """Create a generator of tokens."""
+
+    def token_to_text(self, token, text_holder):
+        """Obtain the text for the current token.
+
+        This method does the work of turning a token into text."""
 
 
-class BaseTokenScanner(TokenSequence.Provider):
+class AbstractTokenScanner(
+        TokenSequence.Provider, TokenGenerating.Provider):
+
+    """Abstract class implementing the TokenSequence calls.
+
+    Provide a generic implementation that relies on the existence of
+    TokenGenerating methods to do the actual conversion.
+
+    Note, trying to instantiate this class will give an error, since
+    the TokenGenerating methods are not yet defined.
+    """
+
+    def __iter__(self):
+        self.generator = self.create_generator()
+        return self.generator
+
+    def next(self):
+        return next(self.generator)
 
     def get_text(self, token, text_holder=None):
         """Return the current text in the input stream.
 
-        If the token type is of interest to the processor, calling this
-        method will return the actual text, which can be processed
-        further.
-
-        If the optional ``text_holder`` parameter is not provided, this
-        will usually allocate a new Text instance.
-
-        If the optional ``text_holder`` parameter is provided, this
-        function **may** choose to use the provided (subclass of)
-        ``TextHolder`` as the returned text.  This allows the
-        opportunity for the system to avoid allocating memory for the
-        text.
-
-        Note that this method is not required to use the provided text
-        holder, so the return value must be used for subsequent
-        processing of the text.
-
-        :param token: A Token returned from the iterator
-        :param text_holder: An optional TextHolder that can be set
-        :return: The current text in the input stream
-        :rtype: minim.tokens.TextHolder
+        This method checks if the text is cached in the token, and
+        allocates a token holder if required.
         """
         assert isinstance(token, tokens.Token), token
         text = token.text
@@ -312,7 +316,7 @@ class BaseTokenScanner(TokenSequence.Provider):
         return text
 
 
-class SendBasedTokenScanner(BaseTokenScanner):
+class SendBasedTokenScanner(AbstractTokenScanner):
 
     """An iterable that yields token types, and responds to send()
     with the token matching the token type."""
@@ -320,21 +324,11 @@ class SendBasedTokenScanner(BaseTokenScanner):
     def __init__(self):
         self.generator = None
 
-    def __iter__(self):
-        self.generator = self.create_generator()
-        return self.generator
-
-    def create_generator(self):
-        pass
-
-    def next(self):
-        return next(self.generator)
-
     def token_to_text(self, token, text_holder):
         return self.generator.send(text_holder)
 
 
-class BufferBasedTokenScanner(BaseTokenScanner):
+class BufferBasedTokenScanner(AbstractTokenScanner):
 
     """An iterable that yields token types, and uses buffer state to
     return the token matching the token type.
@@ -346,16 +340,6 @@ class BufferBasedTokenScanner(BaseTokenScanner):
     def __init__(self):
         self.current_parser = None
         self.generator = None
-
-    def __iter__(self):
-        self.generator = self.create_generator()
-        return self.generator
-
-    def create_generator(self):
-        pass
-
-    def next(self):
-        return next(self.generator)
 
     def token_to_text(self, token, text_holder):
         if text_holder is None:
