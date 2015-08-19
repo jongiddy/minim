@@ -1,14 +1,13 @@
 import unittest
 
-import inter
+from inter import Interface, Dynamic
 
 
 class InterfaceTests(unittest.TestCase):
 
     def test_basic(self):
-        # In debug mode, an interface only has attributes defined in interface
-        # In optimized mode, the interface is not checked.
-        class IFooBar(inter.face):
+        # An interface only has attributes defined in interface
+        class IFooBar(Interface):
             bar = 0
 
             def foo(self):
@@ -34,7 +33,7 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(foobar.bar, 2)
 
     def test_inherit(self):
-        class IFoo(inter.face):
+        class IFoo(Interface):
 
             def foo(self):
                 """A function."""
@@ -61,7 +60,7 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(obj.y, 2)
 
     def test_incomplete_implementation_fails(self):
-        class IFooBar(inter.face):
+        class IFooBar(Interface):
             bar = 0
 
             def foo(self):
@@ -77,7 +76,7 @@ class InterfaceTests(unittest.TestCase):
             IFooBar(obj)
 
     def test_iterator_ok(self):
-        class Iterator(inter.face):
+        class Iterator(Interface):
 
             def __iter__(self):
                 pass
@@ -104,3 +103,32 @@ class InterfaceTests(unittest.TestCase):
         for i in Iterator(xiter):
             result.append(i)
         self.assertEqual(result, [1, 2, 3])
+
+    def test_dynamic_ok(self):
+        class Foo(Interface):
+            x = 1
+
+        class Bar(Dynamic.Provider):
+
+            x = 2
+
+            def provides(self, interface):
+                if issubclass(interface, Foo):
+                    return True
+                return False
+        bar = Bar()
+        Foo.raise_if_not_provided_by(bar)
+
+    def test_dynamic_failure(self):
+        class Foo(Interface):
+            x = 1
+
+        class Bar(Dynamic.Provider):
+
+            def provides(self, interface):
+                if issubclass(interface, Foo):
+                    return True
+                return False
+        bar = Bar()
+        with self.assertRaises(NotImplementedError):
+            Foo.raise_if_not_provided_by(bar)

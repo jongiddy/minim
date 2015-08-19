@@ -155,11 +155,16 @@ class InterfaceMetaclass(type):
             # an object that has already been wrapped by an interface,
             # and that interface is a sub-class of this interface, so it
             # must support all operations
-            return None
-        if isinstance(obj, interface.Provider):
-            # it's an object that subclasses the provider class, which
-            # is a claim to support all operations of interface, so we
-            # verify it.
+            pass
+        elif (
+                isinstance(obj, interface.Provider) or
+                isinstance(obj, Dynamic.Provider) and obj.provides(interface)
+                ):
+            # The object claims to provide the interface, either by
+            # subclassing the interface's provider class, or by
+            # implementing Dynamic and returning True from the provides
+            # method.  Since it is just a claim, verify that the
+            # attributes are supported.
             for name in interface.provider_attributes:
                 if not hasattr(obj, name):
                     if not_implemented is None:
@@ -174,9 +179,10 @@ class InterfaceMetaclass(type):
                     'Object {} does not provide {} {}'.format(
                         obj, attribute, ', '.join(not_implemented)))
             return None
-        raise TypeError(
-            'Object {} does not provide interface {}'. format(
-                obj, interface.__name__))
+        else:
+            raise TypeError(
+                'Object {} does not provide interface {}'. format(
+                    obj, interface.__name__))
 
     def provided_by(interface, obj):
         """Check if object claims to provide the interface.
@@ -184,7 +190,10 @@ class InterfaceMetaclass(type):
         :return: True if interface is provided by the object, else False.
         """
         return (
-            isinstance(obj, interface) or isinstance(obj, interface.Provider))
+            isinstance(obj, interface) or
+            isinstance(obj, interface.Provider) or
+            isinstance(obj, Dynamic.Provider) and obj.provides(interface)
+        )
 
 
 class Interface(object, metaclass=InterfaceMetaclass):
@@ -208,3 +217,16 @@ class Interface(object, metaclass=InterfaceMetaclass):
             raise AttributeError(
                 "{!r} interface has no attribute {!r}".format(
                     my('__class__').__name__, name))
+
+
+class Dynamic(Interface):
+
+    """A class which implements this interface can dynamically implement
+    other interfaces."""
+
+    def provides(self, interface):
+        """Indicate that an instance provides an interface.
+
+        To indicate that the instance implements an interface, this
+        method must return True when the interface class is provided.
+        """
