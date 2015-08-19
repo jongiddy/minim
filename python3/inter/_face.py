@@ -140,14 +140,49 @@ class InterfaceMetaclass(type):
             # If the object to be cast is already an instance of this
             # interface, just return the same object.
             return provider
-        if interface.provided_by(provider):
-            # create a wrapper object to enforce only this interface.
-            return super().__call__(provider)
+        interface.raise_if_not_provided_by(provider)
+        # create a wrapper object to enforce only this interface.
+        return super().__call__(provider)
+
+    def raise_if_not_provided_by(interface, obj):
+        """Check if obj provides the interface.
+
+        :raise: an informative error if not. For example, a
+        non-implemented attribute is returned in the exception.
+        """
+        not_implemented = None
+        if isinstance(obj, interface):
+            # an object that has already been wrapped by an interface,
+            # and that interface is a sub-class of this interface, so it
+            # must support all operations
+            return None
+        if isinstance(obj, interface.Provider):
+            # it's an object that subclasses the provider class, which
+            # is a claim to support all operations of interface, so we
+            # verify it.
+            for name in interface.provider_attributes:
+                if not hasattr(obj, name):
+                    if not_implemented is None:
+                        not_implemented = []
+                    not_implemented.append(repr(name))
+            if not_implemented:
+                if len(not_implemented) == 1:
+                    attribute = 'attribute'
+                else:
+                    attribute = 'attributes'
+                raise NotImplementedError(
+                    'Object {} does not provide {} {}'.format(
+                        obj, attribute, ', '.join(not_implemented)))
+            return None
         raise TypeError(
-            'Object {} does not support interface {}'. format(
-                provider, interface.__name__))
+            'Object {} does not provide interface {}'. format(
+                obj, interface.__name__))
 
     def provided_by(interface, obj):
+        """Check if obj provides the interface.
+
+        :return: True if interface is provided by the object, else False.
+        """
         if isinstance(obj, interface):
             # an object that has already been wrapped by an interface,
             # and that interface is a sub-class of this interface, so it

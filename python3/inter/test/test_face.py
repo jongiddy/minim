@@ -73,7 +73,7 @@ class InterfaceTests(unittest.TestCase):
             bar = 1
 
         obj = Bar()
-        with self.assertRaises(TypeError):
+        with self.assertRaises(NotImplementedError):
             IFooBar(obj)
 
     def test_iterator_ok(self):
