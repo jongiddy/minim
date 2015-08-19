@@ -132,20 +132,20 @@ class InterfaceMetaclass(type):
         interface = super().__new__(meta, name, bases, class_attributes)
         return interface
 
-    def __call__(interface, provider):
+    def __call__(interface, obj):
         # Calling Interface(object) will call this function first.  We
         # get a chance to return the same object if suitable.
         """Cast the object to this interface."""
-        if type(provider) is interface:
+        if type(obj) is interface:
             # If the object to be cast is already an instance of this
             # interface, just return the same object.
-            return provider
-        interface.raise_if_not_provided_by(provider)
+            return obj
+        interface.raise_if_not_provided_by(obj)
         # create a wrapper object to enforce only this interface.
-        return super().__call__(provider)
+        return super().__call__(obj)
 
     def raise_if_not_provided_by(interface, obj):
-        """Check if obj provides the interface.
+        """Check if object provides the interface.
 
         :raise: an informative error if not. For example, a
         non-implemented attribute is returned in the exception.
@@ -179,24 +179,12 @@ class InterfaceMetaclass(type):
                 obj, interface.__name__))
 
     def provided_by(interface, obj):
-        """Check if obj provides the interface.
+        """Check if object claims to provide the interface.
 
         :return: True if interface is provided by the object, else False.
         """
-        if isinstance(obj, interface):
-            # an object that has already been wrapped by an interface,
-            # and that interface is a sub-class of this interface, so it
-            # must support all operations
-            return True
-        if isinstance(obj, interface.Provider):
-            # it's an object that subclasses the provider class, which
-            # is a claim to support all operations of interface, so we
-            # verify it.
-            for name in interface.provider_attributes:
-                if not hasattr(obj, name):
-                    return False
-            return True
-        return False
+        return (
+            isinstance(obj, interface) or isinstance(obj, interface.Provider))
 
 
 class Interface(object, metaclass=InterfaceMetaclass):
