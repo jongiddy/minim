@@ -29,13 +29,9 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(foobar.bar, 1)
         foobar.foo()
         self.assertEqual(foobar.bar, 2)
-        if __debug__:
-            with self.assertRaises(AttributeError):
-                foobar.baz()
-            self.assertEqual(foobar.bar, 2)
-        else:
+        with self.assertRaises(AttributeError):
             foobar.baz()
-            self.assertEqual(foobar.bar, 3)
+        self.assertEqual(foobar.bar, 2)
 
     def test_inherit(self):
         class IFoo(inter.face):
@@ -60,13 +56,9 @@ class InterfaceTests(unittest.TestCase):
         foo = IFoo(obj)
         foo.foo()
         self.assertEqual(obj.y, 2)
-        if __debug__:
-            with self.assertRaises(AttributeError):
-                foo.baz()
-            self.assertEqual(obj.y, 2)
-        else:
+        with self.assertRaises(AttributeError):
             foo.baz()
-            self.assertEqual(obj.y, 3)
+        self.assertEqual(obj.y, 2)
 
     def test_incomplete_implementation_fails(self):
         class IFooBar(inter.face):
@@ -81,10 +73,7 @@ class InterfaceTests(unittest.TestCase):
             bar = 1
 
         obj = Bar()
-        if __debug__:
-            with self.assertRaises(TypeError):
-                IFooBar(obj)
-        else:
+        with self.assertRaises(TypeError):
             IFooBar(obj)
 
     def test_iterator_ok(self):
