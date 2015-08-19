@@ -82,7 +82,7 @@ class InterfaceTests(unittest.TestCase):
 
         obj = Bar()
         if __debug__:
-            with self.assertRaises(AttributeError):
+            with self.assertRaises(TypeError):
                 IFooBar(obj)
         else:
             IFooBar(obj)

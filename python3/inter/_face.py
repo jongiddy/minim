@@ -136,29 +136,32 @@ class InterfaceMetaclass(type):
         # Calling Interface(object) will call this function first.  We
         # get a chance to return the same object if suitable.
         """Cast the object to this interface."""
-        if provider.__class__ is interface:
-            # If the cast object is this interface, just return
-            # the same interface.
+        if type(provider) is interface:
+            # If the object to be cast is already an instance of this
+            # interface, just return the same object.
             return provider
-        if isinstance(provider, interface):
-            # If the cast object is a subclass of this face, create
-            # a wrapper object.
-            return super().__call__(provider)
-        if isinstance(provider, interface.Provider):
-            # If the cast object provides this interface, test that the
-            # object has all required attributes and create a wrapper
-            # object.
-            for name in interface.provider_attributes:
-                getattr(provider, name)
+        if interface.provided_by(provider):
+            # create a wrapper object to enforce only this interface.
             return super().__call__(provider)
         raise TypeError(
             'Object {} does not support interface {}'. format(
                 provider, interface.__name__))
 
     def provided_by(interface, obj):
-        return (
-            isinstance(obj, interface) or isinstance(obj, interface.Provider)
-        )
+        if isinstance(obj, interface):
+            # an object that has already been wrapped by an interface,
+            # and that interface is a sub-class of this interface, so it
+            # must support all operations
+            return True
+        if isinstance(obj, interface.Provider):
+            # it's an object that subclasses the provider class, which
+            # is a claim to support all operations of interface, so we
+            # verify it.
+            for name in interface.provider_attributes:
+                if not hasattr(obj, name):
+                    return False
+            return True
+        return False
 
 
 class Interface(object, metaclass=InterfaceMetaclass):
