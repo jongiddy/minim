@@ -112,7 +112,7 @@ class InterfaceTests(unittest.TestCase):
 
             x = 2
 
-            def provides(self, interface):
+            def provides_interface(self, interface):
                 if issubclass(interface, Foo):
                     return True
                 return False
@@ -125,7 +125,7 @@ class InterfaceTests(unittest.TestCase):
 
         class Bar(Dynamic.Provider):
 
-            def provides(self, interface):
+            def provides_interface(self, interface):
                 if issubclass(interface, Foo):
                     return True
                 return False

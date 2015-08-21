@@ -158,7 +158,8 @@ class InterfaceMetaclass(type):
             pass
         elif (
                 isinstance(obj, interface.Provider) or
-                isinstance(obj, Dynamic.Provider) and obj.provides(interface)
+                isinstance(obj, Dynamic.Provider) and
+                    obj.provides_interface(interface)
                 ):
             # The object claims to provide the interface, either by
             # subclassing the interface's provider class, or by
@@ -192,7 +193,8 @@ class InterfaceMetaclass(type):
         return (
             isinstance(obj, interface) or
             isinstance(obj, interface.Provider) or
-            isinstance(obj, Dynamic.Provider) and obj.provides(interface)
+            isinstance(obj, Dynamic.Provider) and
+                obj.provides_interface(interface)
         )
 
 
@@ -224,9 +226,10 @@ class Dynamic(Interface):
     """A class which implements this interface can dynamically implement
     other interfaces."""
 
-    def provides(self, interface):
-        """Indicate that an instance provides an interface.
+    def provides_interface(self, interface):
+        """Check whether this instance provides an interface.
 
         To indicate that the instance implements an interface, this
-        method must return True when the interface class is provided.
+        method returns True when the interface class is provided, or
+        False when the interface is not provided.
         """
