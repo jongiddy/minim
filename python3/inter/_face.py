@@ -105,7 +105,7 @@ class InterfaceMetaclass(type):
                 # Special methods, e.g. __iter__, can be called
                 # directly on an instance without going through
                 # __getattribute__.  For example, `for i in x:` will
-                # call x.__iter__() without resolving the name in the
+                # call `x.__iter__()` without resolving the name in the
                 # usual way.  Hence, we need to create these functions
                 # directly on the class.
                 def create_proxy_function(name):
@@ -118,10 +118,10 @@ class InterfaceMetaclass(type):
                         return method(*args, **kw)
                     return proxy_function
                 class_attributes[key] = create_proxy_function(key)
-                # Also add the name to `class_attributes` to ensure that
-                # `__getattribute__` does not reject the name for the
-                # cases where Python does go through the usual process,
-                # e.g. x.__iter__
+                # Also add the name to `provider_attributes` to ensure
+                # that `__getattribute__` does not reject the name for
+                # the cases where Python does go through the usual
+                # process, e.g. a literal `x.__iter__`
                 provider_attributes.add(key)
             else:
                 # All other attributes are simply mapped using
@@ -157,10 +157,10 @@ class InterfaceMetaclass(type):
             # must support all operations
             pass
         elif (
-                isinstance(obj, interface.Provider) or
-                isinstance(obj, Dynamic.Provider) and
-                    obj.provides_interface(interface)
-                ):
+            isinstance(obj, interface.Provider) or
+            isinstance(obj, (Dynamic, Dynamic.Provider)) and
+                obj.provides_interface(interface)
+        ):
             # The object claims to provide the interface, either by
             # subclassing the interface's provider class, or by
             # implementing Dynamic and returning True from the provides
@@ -191,11 +191,10 @@ class InterfaceMetaclass(type):
         :return: True if interface is provided by the object, else False.
         """
         return (
-            isinstance(obj, interface) or
-            isinstance(obj, interface.Provider) or
-            isinstance(obj, Dynamic.Provider) and
+            isinstance(obj, (interface, interface.Provider)) or
+            isinstance(obj, (Dynamic, Dynamic.Provider)) and
                 obj.provides_interface(interface)
-        )
+            )
 
 
 class Interface(object, metaclass=InterfaceMetaclass):
@@ -223,7 +222,7 @@ class Interface(object, metaclass=InterfaceMetaclass):
 
 class Dynamic(Interface):
 
-    """A class which implements this interface can dynamically implement
+    """A class which implements this interface can dynamically provide
     other interfaces."""
 
     def provides_interface(self, interface):
