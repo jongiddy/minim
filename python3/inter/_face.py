@@ -81,10 +81,15 @@ class InterfaceMetaclass(type):
         # Called when a new class is defined.  Use the dictionary of
         # declared attributes to create a mapping to the wrapped object
         BaseInterfaceProviders = []
+        class_attributes = {}
+        provider_attributes = set()
         for base in bases:
             if base is not object and issubclass(base, Interface):
                 # base class is a super-interface of this interface
                 BaseInterfaceProviders.append(base.Provider)
+                # This interface provides all attributes from the base
+                # interface
+                provider_attributes |= base.provider_attributes
 
         class InterfaceProvider(*BaseInterfaceProviders):
             # Subclassing this class indicates that the class implements
@@ -92,8 +97,6 @@ class InterfaceMetaclass(type):
             # classes of super-interfaces, it also indicates that the
             # class implements those interfaces as well.
             pass
-        class_attributes = {}
-        provider_attributes = set()
         for key, value in dct.items():
             # Almost all attributes on the interface are mapped to
             # return the equivalent attributes on the wrapped object.
