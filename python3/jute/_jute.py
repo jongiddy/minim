@@ -178,21 +178,22 @@ class InterfaceMetaclass(type):
             # subclassing the interface's provider class, or by
             # implementing Dynamic and returning True from the provides
             # method.  Since it is just a claim, verify that the
-            # attributes are supported.
-            for name in interface.provider_attributes:
-                if not hasattr(obj, name):
-                    if not_implemented is None:
-                        not_implemented = []
-                    not_implemented.append(repr(name))
-            if not_implemented:
-                if len(not_implemented) == 1:
-                    attribute = 'attribute'
-                else:
-                    attribute = 'attributes'
-                raise NotImplementedError(
-                    'Object {} does not provide {} {}'.format(
-                        obj, attribute, ', '.join(not_implemented)))
-            return None
+            # attributes are supported.  When running optimised, accept
+            # claims.
+            if __debug__:
+                for name in interface.provider_attributes:
+                    if not hasattr(obj, name):
+                        if not_implemented is None:
+                            not_implemented = []
+                        not_implemented.append(repr(name))
+                if not_implemented:
+                    if len(not_implemented) == 1:
+                        attribute = 'attribute'
+                    else:
+                        attribute = 'attributes'
+                    raise NotImplementedError(
+                        'Object {} does not provide {} {}'.format(
+                            obj, attribute, ', '.join(not_implemented)))
         else:
             raise TypeError(
                 'Object {} does not provide interface {}'. format(

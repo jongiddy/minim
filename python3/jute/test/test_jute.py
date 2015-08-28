@@ -85,6 +85,7 @@ class InterfaceProviderTests(unittest.TestCase):
         self.assertEqual(obj.foo, 1)
 
     def test_incomplete_implementation_fails(self):
+        """Incomplete implementations are caught (during debugging)."""
         class Bar(FooBar.Provider):
             # doesn't implement foo
 
@@ -92,8 +93,13 @@ class InterfaceProviderTests(unittest.TestCase):
                 pass
 
         obj = Bar()
-        with self.assertRaises(NotImplementedError):
-            FooBar(obj)
+        if __debug__:
+            with self.assertRaises(NotImplementedError):
+                FooBar(obj)
+        else:
+            foobar = FooBar(obj)
+            with self.assertRaises(AttributeError):
+                foobar.foo
 
     def test_upcast_fails(self):
         # XXX this should probably give the same error as above
@@ -171,6 +177,7 @@ class DynamicProviderTests(unittest.TestCase):
         self.assertEqual(obj.foo, 1)
 
     def test_incomplete_implementation_fails(self):
+        """Incomplete implementations are caught (during debugging)."""
         class BarProxy(Dynamic.Provider):
             # doesn't implement foo
 
@@ -183,8 +190,13 @@ class DynamicProviderTests(unittest.TestCase):
                 pass
 
         obj = BarProxy()
-        with self.assertRaises(NotImplementedError):
-            FooBar(obj)
+        if __debug__:
+            with self.assertRaises(NotImplementedError):
+                FooBar(obj)
+        else:
+            foobar = FooBar(obj)
+            with self.assertRaises(AttributeError):
+                foobar.foo
 
     def test_upcast_fails(self):
         # XXX this should probably give the same error as above
