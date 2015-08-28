@@ -145,7 +145,7 @@ class InterfaceMetaclass(type):
         interface = super().__new__(meta, name, bases, class_attributes)
         return interface
 
-    def __call__(interface, obj):
+    def __call__(interface, obj, validate=None):
         # Calling Interface(object) will call this function first.  We
         # get a chance to return the same object if suitable.
         """Cast the object to this interface."""
@@ -153,11 +153,11 @@ class InterfaceMetaclass(type):
             # If the object to be cast is already an instance of this
             # interface, just return the same object.
             return obj
-        interface.raise_if_not_provided_by(obj)
+        interface.raise_if_not_provided_by(obj, validate)
         # create a wrapper object to enforce only this interface.
         return super().__call__(obj)
 
-    def raise_if_not_provided_by(interface, obj):
+    def raise_if_not_provided_by(interface, obj, validate=None):
         """Check if object provides the interface.
 
         :raise: an informative error if not. For example, a
@@ -178,9 +178,10 @@ class InterfaceMetaclass(type):
             # subclassing the interface's provider class, or by
             # implementing Dynamic and returning True from the provides
             # method.  Since it is just a claim, verify that the
-            # attributes are supported.  When running optimised, accept
-            # claims.
-            if __debug__:
+            # attributes are supported.  If `validate` is False or is
+            # not set and code is optimised, accept claims without
+            # validating.
+            if validate is None and __debug__ or validate:
                 for name in interface.provider_attributes:
                     if not hasattr(obj, name):
                         if not_implemented is None:
