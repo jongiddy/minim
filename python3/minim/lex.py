@@ -14,7 +14,7 @@ the need to operate a state machine.
 """
 import re
 
-import inter
+import jute
 from minim import iterseq, tokens
 
 
@@ -224,7 +224,7 @@ class NmTokenParser(PatternParser):
         return bool(self.name_initial_pattern.match(s))
 
 
-class TokenSequence(inter.face):
+class TokenSequence(jute.Interface):
 
     """An iterable that yields token types, and provides a method to
     obtain the token matching the token type."""
@@ -270,7 +270,7 @@ class TokenSequence(inter.face):
         """
 
 
-class TokenGenerating(inter.face):
+class TokenGenerating(jute.Interface):
 
     def create_generator(self):
         """Create a generator of tokens."""

@@ -1,6 +1,6 @@
 import unittest
 
-from inter import Interface, Dynamic
+from jute import Interface, Dynamic
 
 
 # Simple interface hierarchy for testing

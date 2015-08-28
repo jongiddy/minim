@@ -1,5 +1,5 @@
 from time import time
-import inter
+import jute
 
 # Create an interface IFoo
 # Create a sub-interface IFooBar
@@ -15,7 +15,7 @@ import inter
 # fails calling foo, bar, baz
 
 
-class Increments(inter.face):
+class Increments(jute.Interface):
 
     def increment():
         """Increment something"""

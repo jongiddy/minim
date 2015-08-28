@@ -35,7 +35,7 @@ code to use the original objects by running Python with the ``-O`` flag.
 :Example:
 
 >>> import sys
->>> from inter import Interface
+>>> from jute import Interface
 >>> class Writes(Interface):
 ...     def write(self, buf):
 ...         "Write the string buf."
