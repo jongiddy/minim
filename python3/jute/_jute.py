@@ -69,6 +69,13 @@ interface.  Hence, ``sys.stdout`` cannot be indicated as satisfying the
 """
 
 
+# Declare the base classes for the `Interface` class here so the
+# metaclass `__new__` method can avoid running
+# `issubclass(base, Interface)` during the creation of the `Interface`
+# class, at a time when the name `Interface` does not exist.
+_InterfaceBaseClasses = (object,)
+
+
 class InterfaceMetaclass(type):
 
     KEPT = frozenset((
@@ -84,7 +91,10 @@ class InterfaceMetaclass(type):
         class_attributes = {}
         provider_attributes = set()
         for base in bases:
-            if base is not object and issubclass(base, Interface):
+            if (
+                base not in _InterfaceBaseClasses and
+                issubclass(base, Interface)
+            ):
                 # base class is a super-interface of this interface
                 BaseInterfaceProviders.append(base.Provider)
                 # This interface provides all attributes from the base
@@ -200,7 +210,7 @@ class InterfaceMetaclass(type):
             )
 
 
-class Interface(object, metaclass=InterfaceMetaclass):
+class Interface(*_InterfaceBaseClasses, metaclass=InterfaceMetaclass):
 
     def __init__(self, provider):
         """Wrap an object with an interface object."""
@@ -225,13 +235,11 @@ class Interface(object, metaclass=InterfaceMetaclass):
 
 class Dynamic(Interface):
 
-    """A class which implements this interface can dynamically provide
-    other interfaces."""
+    """Interface to dynamically provide other interfaces."""
 
     def provides_interface(self, interface):
         """Check whether this instance provides an interface.
 
-        To indicate that the instance implements an interface, this
-        method returns True when the interface class is provided, or
-        False when the interface is not provided.
+        This method returns True when the interface class is provided,
+        or False when the interface is not provided.
         """
