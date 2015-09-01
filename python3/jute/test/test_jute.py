@@ -1,6 +1,6 @@
 import unittest
 
-from jute import Interface, Dynamic
+from jute import Interface, Dynamic, InterfaceConformanceError
 
 
 # Simple interface hierarchy for testing
@@ -85,7 +85,18 @@ class InterfaceProviderTests(unittest.TestCase):
         self.assertEqual(obj.foo, 1)
 
     def test_incomplete_implementation_validate_none(self):
-        """Incomplete implementations are caught (during debugging)."""
+        """Incomplete implementations are caught (during debugging).
+
+        If an object claims to provide an interface, but doesn't,
+        conversion to the interface will raise an
+        InterfaceConformanceError in non-optimised code.
+
+        In optimised code, the relatively expensive verification is
+        removed and claims to implement an interface are always
+        accepted. Accessing a non-interface attribute will still lead to
+        an AttributeError, but this may occur later, when it is more
+        difficult to diagnose where the invalid object came from.
+        """
         class Bar(FooBar.Provider):
             # doesn't implement foo
 
@@ -94,7 +105,7 @@ class InterfaceProviderTests(unittest.TestCase):
 
         obj = Bar()
         if __debug__:
-            with self.assertRaises(NotImplementedError):
+            with self.assertRaises(InterfaceConformanceError):
                 FooBar(obj)
         else:
             foobar = FooBar(obj)
@@ -102,7 +113,7 @@ class InterfaceProviderTests(unittest.TestCase):
                 foobar.foo
 
     def test_incomplete_implementation_validate_true(self):
-        """Incomplete implementations are caught (during debugging)."""
+        """validate is True -> always raise InterfaceConformanceError."""
         class Bar(FooBar.Provider):
             # doesn't implement foo
 
@@ -110,11 +121,11 @@ class InterfaceProviderTests(unittest.TestCase):
                 pass
 
         obj = Bar()
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(InterfaceConformanceError):
             FooBar(obj, validate=True)
 
     def test_incomplete_implementation_validate_false(self):
-        """Incomplete implementations are caught (during debugging)."""
+        """validate is False -> always raise late AttributeError."""
         class Bar(FooBar.Provider):
             # doesn't implement foo
 
@@ -127,7 +138,6 @@ class InterfaceProviderTests(unittest.TestCase):
             foobar.foo
 
     def test_upcast_fails(self):
-        # XXX this should probably give the same error as above
         obj = FooBarBaz()
         foo = Foo(obj)
         with self.assertRaises(TypeError):
@@ -137,7 +147,8 @@ class InterfaceProviderTests(unittest.TestCase):
         """Duck-typed object does not match unclaimed interface.
 
         Although object matches the interface by duck-typing, it does
-        not claim to provide the interface, so it fails."""
+        not claim to provide the interface, so it fails with a
+        TypeError."""
         obj = FooBarBaz()
         with self.assertRaises(TypeError):
             FooBaz(obj)
@@ -146,7 +157,8 @@ class InterfaceProviderTests(unittest.TestCase):
         """Duck-typed wrapped object does not match unclaimed interface.
 
         Although object matches the interface by duck-typing, it does
-        not claim to provide the interface, so it fails."""
+        not claim to provide the interface, so it fails with a
+        TypeError."""
         obj = FooBarBaz()
         foobar = FooBar(obj)
         with self.assertRaises(TypeError):
@@ -216,7 +228,7 @@ class DynamicProviderTests(unittest.TestCase):
 
         obj = BarProxy()
         if __debug__:
-            with self.assertRaises(NotImplementedError):
+            with self.assertRaises(InterfaceConformanceError):
                 FooBar(obj)
         else:
             foobar = FooBar(obj)
@@ -224,7 +236,6 @@ class DynamicProviderTests(unittest.TestCase):
                 foobar.foo
 
     def test_upcast_fails(self):
-        # XXX this should probably give the same error as above
         obj = FooBarProxy()
         foo = Foo(obj)
         with self.assertRaises(TypeError):
@@ -234,7 +245,8 @@ class DynamicProviderTests(unittest.TestCase):
         """Duck-typed object does not match unclaimed interface.
 
         Although object matches the interface by duck-typing, it does
-        not claim to provide the interface, so it fails."""
+        not claim to provide the interface, so it fails with a
+        TypeError."""
         obj = FooBarProxy()
         with self.assertRaises(TypeError):
             FooBaz(obj)
@@ -243,7 +255,8 @@ class DynamicProviderTests(unittest.TestCase):
         """Duck-typed wrapped object does not match unclaimed interface.
 
         Although object matches the interface by duck-typing, it does
-        not claim to provide the interface, so it fails."""
+        not claim to provide the interface, so it fails with a
+        TypeError."""
         obj = FooBarProxy()
         foobar = FooBar(obj)
         with self.assertRaises(TypeError):

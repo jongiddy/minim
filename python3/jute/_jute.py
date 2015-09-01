@@ -55,18 +55,52 @@ code to use the original objects by running Python with the ``-O`` flag.
 >>> out = StdoutWriter()
 >>> output(out, 'Hello, World!')
 
-In normal Python mode, ``writer`` will be replaced by the interface,
-and the attempt to use ``flush``, which is not part of the interface,
-will fail.
+In the above code, ``writer`` will be replaced by the interface, and the
+attempt to use ``flush``, which is not part of the interface, will fail.
 
-In optimised Python, ``writer`` will use the original object, failing to
-see the error (which has hopefully been fixed by now), but running
-faster without the intervening interface replacement.
+Subclassing an interface's Provider attribute indicates a claim to
+implement the interface.  This claim is verified during conversion to
+the interface, but only in non-optimised code.
+
+In optimised Python, ``writer`` will use the original object, and should
+run faster without the intervening interface replacement.  In this case,
+the code will work with the current implementation, but may fail if a
+different object, that does not support ``flush`` is passed.
 
 Note, there is no way to specify non-subclassed types as implementing an
 interface.  Hence, ``sys.stdout`` cannot be indicated as satisfying the
 ``Writes`` interface.
 """
+
+
+class InterfaceConformanceError(Exception):
+
+    """Object does not conform to interface specification.
+
+    Exception indicating that an object claims to provide an interface,
+    but does not match the interface specification.
+
+    This is almost a TypeError, but an object provides two parts to its
+    interface implementation: a claim to provide the interface, and the
+    attributes that match the interface specification.  This exception
+    indicates the partial match of claiming to provide the interface,
+    but not actually providing all the attributes required by an
+    interface.
+
+    It could also be considered an AttributeError, as when validation is
+    off, that is the alternative exception (that might be) raised.
+    However, future versions of this module may perform additional
+    validation to catch TypeError's (e.g. function paramete matching).
+
+    It was also tempting to raise a NotImplementedError, which captures
+    some of the meaning. However, NotImplementedError is usually used
+    as a marker for abstract methods or in-progress partial
+    implementations.  In particular, a developer of an interface
+    provider class may use NotImplementedError to satisy the interface
+    where they know the code does not use a particular attribute of the
+    interface.  Using a different exception causes less confusion.
+    """
+    pass
 
 
 # Declare the base classes for the `Interface` class here so the
@@ -192,7 +226,7 @@ class InterfaceMetaclass(type):
                         attribute = 'attribute'
                     else:
                         attribute = 'attributes'
-                    raise NotImplementedError(
+                    raise InterfaceConformanceError(
                         'Object {} does not provide {} {}'.format(
                             obj, attribute, ', '.join(not_implemented)))
         else:
