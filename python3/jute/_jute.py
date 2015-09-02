@@ -217,7 +217,9 @@ class InterfaceMetaclass(type):
             # validating.
             if validate is None and __debug__ or validate:
                 for name in interface.provider_attributes:
-                    if not hasattr(obj, name):
+                    try:
+                        getattr(obj, name)
+                    except AttributeError:
                         if not_implemented is None:
                             not_implemented = []
                         not_implemented.append(repr(name))
