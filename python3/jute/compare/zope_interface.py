@@ -12,7 +12,6 @@ class IncrementsBar(Increments):
 
     """Provide bar as an attribute"""
 
-    bar = 1
     bar = zope.interface.Attribute("""An attribute""")
 
 
