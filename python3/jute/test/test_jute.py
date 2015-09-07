@@ -283,7 +283,7 @@ class DynamicProviderTests(unittest.TestCase):
         self.assertEqual(obj.foo, 3)
 
 
-iterable = range(5)
+count_to_5 = range(5)
 
 
 class Iterable(Interface):
@@ -292,47 +292,47 @@ class Iterable(Interface):
         """Interface for an iterable."""
 
 
-class Count5(Iterable.Provider):
+class CountTo5(Iterable.Provider):
 
     def __iter__(self):
-        return iter(iterable)
+        return iter(count_to_5)
 
 
 class SpecialMethodTests(unittest.TestCase):
 
     def test_for_instance(self):
-        expected = list(iterable)
+        expected = list(count_to_5)
         result = []
-        cnt = Count5()
+        cnt = CountTo5()
         for val in cnt:
             result.append(val)
         self.assertEqual(result, expected)
 
     def test_for_interface(self):
-        expected = list(iterable)
+        expected = list(count_to_5)
         result = []
-        cnt = Iterable(Count5())
+        cnt = Iterable(CountTo5())
         for val in cnt:
             result.append(val)
         self.assertEqual(result, expected)
 
     def test_getattr(self):
-        cnt = Iterable(Count5())
+        cnt = Iterable(CountTo5())
         iterator = getattr(cnt, '__iter__')()
         self.assertEqual(next(iterator), 0)
 
     def test_iter(self):
-        cnt = Iterable(Count5())
+        cnt = Iterable(CountTo5())
         iterator = iter(cnt)
         self.assertEqual(next(iterator), 0)
 
     def test_attribute(self):
-        cnt = Iterable(Count5())
+        cnt = Iterable(CountTo5())
         iterator = cnt.__iter__()
         self.assertEqual(next(iterator), 0)
 
 
-class IteratorProxy(Dynamic.Provider):
+class IterableProxy(Dynamic.Provider):
 
     def provides_interface(self, interface):
         if issubclass(Iterable, interface):
@@ -340,39 +340,39 @@ class IteratorProxy(Dynamic.Provider):
         return False
 
     def __iter__(self):
-        return iter(iterable)
+        return iter(count_to_5)
 
 
 class DynamicSpecialMethodTests(unittest.TestCase):
 
     def test_for_instance(self):
-        expected = list(iterable)
+        expected = list(count_to_5)
         result = []
-        cnt = IteratorProxy()
+        cnt = IterableProxy()
         for val in cnt:
             result.append(val)
         self.assertEqual(result, expected)
 
     def test_for_interface(self):
-        expected = list(iterable)
+        expected = list(count_to_5)
         result = []
-        cnt = Iterable(IteratorProxy())
+        cnt = Iterable(IterableProxy())
         for val in cnt:
             result.append(val)
         self.assertEqual(result, expected)
 
     def test_getattr(self):
-        cnt = Iterable(IteratorProxy())
+        cnt = Iterable(IterableProxy())
         iterator = getattr(cnt, '__iter__')()
         self.assertEqual(next(iterator), 0)
 
     def test_iter(self):
-        cnt = Iterable(IteratorProxy())
+        cnt = Iterable(IterableProxy())
         iterator = iter(cnt)
         self.assertEqual(next(iterator), 0)
 
     def test_attribute(self):
-        cnt = Iterable(IteratorProxy())
+        cnt = Iterable(IterableProxy())
         iterator = cnt.__iter__()
         self.assertEqual(next(iterator), 0)
 
@@ -382,7 +382,7 @@ class GeneratedIterCount5(Iterable.Provider):
     def __getattr__(self, name):
         if name == '__iter__':
             def f():
-                return iter(iterable)
+                return iter(count_to_5)
             return f
 
 
