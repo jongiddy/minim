@@ -298,17 +298,6 @@ class Count5(Iterable.Provider):
         return iter(iterable)
 
 
-class IteratorProxy(Dynamic.Provider):
-
-    def provides_interface(self, interface):
-        if issubclass(Iterable, interface):
-            return True
-        return False
-
-    def __iter__(self):
-        return iter(iterable)
-
-
 class SpecialMethodTests(unittest.TestCase):
 
     def test_for_instance(self):
@@ -343,6 +332,17 @@ class SpecialMethodTests(unittest.TestCase):
         self.assertEqual(next(iterator), 0)
 
 
+class IteratorProxy(Dynamic.Provider):
+
+    def provides_interface(self, interface):
+        if issubclass(Iterable, interface):
+            return True
+        return False
+
+    def __iter__(self):
+        return iter(iterable)
+
+
 class DynamicSpecialMethodTests(unittest.TestCase):
 
     def test_for_instance(self):
@@ -373,5 +373,54 @@ class DynamicSpecialMethodTests(unittest.TestCase):
 
     def test_attribute(self):
         cnt = Iterable(IteratorProxy())
+        iterator = cnt.__iter__()
+        self.assertEqual(next(iterator), 0)
+
+
+class GeneratedIterCount5(Iterable.Provider):
+
+    def __getattr__(self, name):
+        if name == '__iter__':
+            def f():
+                return iter(iterable)
+            return f
+
+
+class IterSpecialMethodTests(unittest.TestCase):
+
+    """Test __iter__ for a provider that generates __iter__.
+
+    Using a dynamicaly generated __iter__ method fails when using `for`
+    on an object.  To minimise surprise, the interface should behave the
+    same way.
+    """
+
+    def test_iter_for_instance(self):
+        cnt = GeneratedIterCount5()
+        with self.assertRaises(TypeError):
+            iter(cnt)
+
+    def test_iter_for_interface(self):
+        cnt = Iterable(GeneratedIterCount5())
+        with self.assertRaises(TypeError):
+            iter(cnt)
+
+    def test_getattr_for_instance(self):
+        cnt = GeneratedIterCount5()
+        iterator = getattr(cnt, '__iter__')()
+        self.assertEqual(next(iterator), 0)
+
+    def test_getattr_for_interface(self):
+        cnt = Iterable(GeneratedIterCount5())
+        iterator = getattr(cnt, '__iter__')()
+        self.assertEqual(next(iterator), 0)
+
+    def test_attribute_for_instance(self):
+        cnt = GeneratedIterCount5()
+        iterator = cnt.__iter__()
+        self.assertEqual(next(iterator), 0)
+
+    def test_attribute_for_interface(self):
+        cnt = Iterable(GeneratedIterCount5())
         iterator = cnt.__iter__()
         self.assertEqual(next(iterator), 0)

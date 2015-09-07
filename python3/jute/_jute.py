@@ -148,6 +148,23 @@ class InterfaceMetaclass(type):
                 # A few attributes need to be kept pointing to the
                 # interface object.
                 class_attributes[key] = value
+            elif key == '__iter__':
+                # Calling `iter()` or `for` bypasses the getattribute
+                # machinery. To ensure that the interface fails in the
+                # same way as the original instance, create a special
+                # proxy for `__iter__`.  This knobbling of an interface,
+                # which would otherwise succeed, is necessary to avoid
+                # new errors occurring in production code if the user
+                # wraps interface casting in 'if __debug__:'.
+                def proxy_function(self):
+                    my = object.__getattribute__
+                    return iter(my(self, 'provider'))
+                class_attributes[key] = proxy_function
+                # Also add the name to `provider_attributes` to ensure
+                # that `__getattribute__` does not reject the name for
+                # the cases where Python does go through the usual
+                # process, e.g. a literal `x.__iter__`
+                provider_attributes.add(key)
             elif key.startswith('__'):
                 # Special methods, e.g. __iter__, can be called
                 # directly on an instance without going through
