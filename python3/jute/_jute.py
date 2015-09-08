@@ -165,6 +165,13 @@ class InterfaceMetaclass(type):
                 # the cases where Python does go through the usual
                 # process, e.g. a literal `x.__iter__`
                 provider_attributes.add(key)
+            elif key == '__next__':
+                # next() is the same as iter()
+                def proxy_function(self):
+                    my = object.__getattribute__
+                    return next(my(self, 'provider'))
+                class_attributes[key] = proxy_function
+                provider_attributes.add(key)
             elif key.startswith('__'):
                 # Special methods, e.g. __iter__, can be called
                 # directly on an instance without going through

@@ -80,9 +80,9 @@ class IterDynamicInterfaceTests(IterTestMixin, unittest.TestCase):
         return IterableProxy(CountTo5())
 
 
-class GeneratedIterCount5(Iterable.Provider):
+class GeneratedIter(Iterable.Provider):
 
-    """A class that generates the __iter__ dynamically."""
+    """A class that generates the __iter__ method dynamically."""
 
     def __getattr__(self, name):
         if name == '__iter__':
@@ -95,7 +95,7 @@ class GeneratedIterTestMixin(IterTestMixin):
 
     """Test __iter__ for a provider that generates __iter__.
 
-    Using a dynamicaly generated __iter__ method fails when using `iter`
+    Using a dynamically generated __iter__ method fails when using `iter`
     or `for` on an object.  To minimise surprise, the interface should
     behave the same way as a normal instance.
 
@@ -117,10 +117,10 @@ class GeneratedIterTestMixin(IterTestMixin):
 class GeneratedIterInstanceTests(GeneratedIterTestMixin, unittest.TestCase):
 
     def get_test_object(self):
-        return GeneratedIterCount5()
+        return GeneratedIter()
 
 
 class GeneratedIterInterfaceTests(GeneratedIterTestMixin, unittest.TestCase):
 
     def get_test_object(self):
-        return Iterable(GeneratedIterCount5())
+        return Iterable(GeneratedIter())
