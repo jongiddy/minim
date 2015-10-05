@@ -84,12 +84,6 @@ class GeneratedStrTestMixin(StringTestMixin):
     Note, that getting the attribute succeeds otherwise.
     """
 
-    def test_getattr_(self):
-        """Can access a dynamic __str__ by calling __getattr__ directly."""
-        string_like = self.get_test_object()
-        self.assertEqual(string_like.__getattr__('__str__')(), 'foo')
-
-    # Otherwise, Python optimises the lookup away.
     def test_getattr(self):
         string_like = self.get_test_object()
         self.assertNotEqual(getattr(string_like, '__str__')(), 'foo')
