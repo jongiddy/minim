@@ -20,6 +20,7 @@ class FooBaz(Foo):
     def baz(self):
         """The baz method."""
 
+
 class IncompleteProviderTestsMixin:
 
     # Change this to the class to be tested
@@ -67,8 +68,8 @@ class CompleteProviderTestsMixin:
     HasFooBarBaz = object
 
     def test_provide(self):
-        # An interface only has attributes defined in interface (and in
-        # sub-interfaces).
+        """An interface only has attributes defined in the interface (or
+        in super-interfaces)."""
         obj = self.HasFooBarBaz()
         foobar = FooBar(obj)
         self.assertEqual(foobar.foo, 1)
@@ -79,6 +80,7 @@ class CompleteProviderTestsMixin:
         self.assertEqual(obj.foo, 2)
 
     def test_inherit(self):
+        """An interface can be mapped to a super-interface."""
         obj = self.HasFooBarBaz()
         foobar = FooBar(obj)
         foo = Foo(foobar)
@@ -88,6 +90,8 @@ class CompleteProviderTestsMixin:
         self.assertEqual(obj.foo, 1)
 
     def test_upcast_fails(self):
+        """An interface cannot be mapped to a sub-interface, even if the
+        wrapped instance could be."""
         obj = self.HasFooBarBaz()
         foo = Foo(obj)
         with self.assertRaises(TypeError):
@@ -115,6 +119,7 @@ class CompleteProviderTestsMixin:
             FooBaz(foobar)
 
     def test_subclass_provider_provides_interface(self):
+        """Subclassing an implementation and a provider works."""
         class FooBarBazSubclass(self.HasFooBarBaz, FooBaz.Provider):
             pass
         obj = FooBarBazSubclass()
@@ -127,6 +132,7 @@ class CompleteProviderTestsMixin:
         self.assertEqual(obj.foo, 3)
 
     def test_provider_subclass_provides_interface(self):
+        """Subclassing a provider and an implementation works."""
         class FooBarBazSubclass(FooBaz.Provider, self.HasFooBarBaz):
             pass
         obj = FooBarBazSubclass()
