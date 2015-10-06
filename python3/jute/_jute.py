@@ -103,7 +103,18 @@ class InterfaceConformanceError(Exception):
     where they know the code does not use a particular attribute of the
     interface.  Using a different exception causes less confusion.
     """
-    pass
+
+    def __init__(self, obj, missing):
+        self.obj = obj
+        self.missing = missing
+
+    def __str__(self):
+        if len(self.missing) == 1:
+            attribute = 'attribute'
+        else:
+            attribute = 'attributes'
+        return '{} does not provide {} {}'.format(
+            self.obj, attribute, ', '.join(self.missing))
 
 
 # Declare the base classes for the `Interface` class here so the
@@ -111,6 +122,19 @@ class InterfaceConformanceError(Exception):
 # `issubclass(base, Interface)` during the creation of the `Interface`
 # class, at a time when the name `Interface` does not exist.
 _InterfaceBaseClasses = (object,)
+
+
+def missing_attributes(obj, attributes):
+    """Return a list of attributes not provided by an object."""
+    missing = None
+    for name in attributes:
+        try:
+            getattr(obj, name)
+        except AttributeError:
+            if missing is None:
+                missing = []
+            missing.append(repr(name))
+    return missing
 
 
 class InterfaceMetaclass(type):
@@ -231,16 +255,10 @@ class InterfaceMetaclass(type):
             # an instance of a class that has been verified to provide
             # the interface, so it must support all operations
             if validate:
-                not_implemented = interface._get_non_provided_attributes(obj)
-                if not_implemented:
-                    if len(not_implemented) == 1:
-                        attribute = 'attribute'
-                    else:
-                        attribute = 'attributes'
-                    raise InterfaceConformanceError(
-                        'Object {} does not provide {} {}'.format(
-                            obj, attribute, ', '.join(not_implemented)))
-
+                missing = missing_attributes(
+                    obj, interface.provider_attributes)
+                if missing:
+                    raise InterfaceConformanceError(obj, missing)
         elif (
             isinstance(obj, interface.Provider) or
             isinstance(obj, (Dynamic, Dynamic.Provider)) and
@@ -254,15 +272,10 @@ class InterfaceMetaclass(type):
             # not set and code is optimised, accept claims without
             # validating.
             if validate is None and __debug__ or validate:
-                not_implemented = interface._get_non_provided_attributes(obj)
-                if not_implemented:
-                    if len(not_implemented) == 1:
-                        attribute = 'attribute'
-                    else:
-                        attribute = 'attributes'
-                    raise InterfaceConformanceError(
-                        'Object {} does not provide {} {}'.format(
-                            obj, attribute, ', '.join(not_implemented)))
+                missing = missing_attributes(
+                    obj, interface.provider_attributes)
+                if missing:
+                    raise InterfaceConformanceError(obj, missing)
         else:
             raise TypeError(
                 'Object {} does not provide interface {}'. format(
@@ -282,29 +295,12 @@ class InterfaceMetaclass(type):
 
     def register_implementation(interface, cls):
         """Check if a provider implements the interface, and register it."""
-        not_implemented = interface._get_non_provided_attributes(cls)
-        if not_implemented:
-            if len(not_implemented) == 1:
-                attribute = 'attribute'
-            else:
-                attribute = 'attributes'
-            raise InterfaceConformanceError(
-                'Class {} does not provide {} {}'.format(
-                    cls, attribute, ', '.join(not_implemented)))
+        missing = missing_attributes(cls, interface.provider_attributes)
+        if missing:
+            raise InterfaceConformanceError(cls, missing)
         for base in interface.__mro__:
             if issubclass(base, Interface) and cls not in base.verified:
                 base.verified += (cls,)
-
-    def _get_non_provided_attributes(interface, obj):
-        not_implemented = None
-        for name in interface.provider_attributes:
-            try:
-                getattr(obj, name)
-            except AttributeError:
-                if not_implemented is None:
-                    not_implemented = []
-                not_implemented.append(repr(name))
-        return not_implemented
 
 
 class Interface(*_InterfaceBaseClasses, metaclass=InterfaceMetaclass):
