@@ -20,35 +20,12 @@ class FooBaz(Foo):
     def baz(self):
         """The baz method."""
 
+class IncompleteProviderTestsMixin:
 
-class BaseProviderTestsMixin:
-
-    # Change these to the classes to be tested
-    HasFooBarBaz = object
+    # Change this to the class to be tested
     HasBarOnly = object
 
-    def test_provide(self):
-        # An interface only has attributes defined in interface (and in
-        # sub-interfaces).
-        obj = self.HasFooBarBaz()
-        foobar = FooBar(obj)
-        self.assertEqual(foobar.foo, 1)
-        foobar.bar()
-        self.assertEqual(obj.foo, 2)
-        with self.assertRaises(AttributeError):
-            foobar.baz()
-        self.assertEqual(obj.foo, 2)
-
-    def test_inherit(self):
-        obj = self.HasFooBarBaz()
-        foobar = FooBar(obj)
-        foo = Foo(foobar)
-        self.assertEqual(foo.foo, 1)
-        with self.assertRaises(AttributeError):
-            foo.bar()
-        self.assertEqual(obj.foo, 1)
-
-    def test_incomplete_implementation_validate_none(self):
+    def test_incomplete_provider_validate_none(self):
         """Incomplete implementations are caught (during debugging).
 
         If an object claims to provide an interface, but doesn't,
@@ -70,18 +47,45 @@ class BaseProviderTestsMixin:
             with self.assertRaises(AttributeError):
                 foobar.foo
 
-    def test_incomplete_implementation_validate_true(self):
+    def test_incomplete_provider_validate_true(self):
         """validate is True -> always raise InterfaceConformanceError."""
         obj = self.HasBarOnly()
         with self.assertRaises(InterfaceConformanceError):
             FooBar(obj, validate=True)
 
-    def test_incomplete_implementation_validate_false(self):
+    def test_incomplete_provider_validate_false(self):
         """validate is False -> always raise late AttributeError."""
         obj = self.HasBarOnly()
         foobar = FooBar(obj, validate=False)
         with self.assertRaises(AttributeError):
             foobar.foo
+
+
+class CompleteProviderTestsMixin:
+
+    # Change this to the class to be tested
+    HasFooBarBaz = object
+
+    def test_provide(self):
+        # An interface only has attributes defined in interface (and in
+        # sub-interfaces).
+        obj = self.HasFooBarBaz()
+        foobar = FooBar(obj)
+        self.assertEqual(foobar.foo, 1)
+        foobar.bar()
+        self.assertEqual(obj.foo, 2)
+        with self.assertRaises(AttributeError):
+            foobar.baz()
+        self.assertEqual(obj.foo, 2)
+
+    def test_inherit(self):
+        obj = self.HasFooBarBaz()
+        foobar = FooBar(obj)
+        foo = Foo(foobar)
+        self.assertEqual(foo.foo, 1)
+        with self.assertRaises(AttributeError):
+            foo.bar()
+        self.assertEqual(obj.foo, 1)
 
     def test_upcast_fails(self):
         obj = self.HasFooBarBaz()
@@ -159,7 +163,9 @@ class IncompleteFooBar(FooBar.Provider):
         pass
 
 
-class InterfaceProviderTests(BaseProviderTestsMixin, unittest.TestCase):
+class InterfaceProviderTests(
+        CompleteProviderTestsMixin, IncompleteProviderTestsMixin,
+        unittest.TestCase):
 
     HasFooBarBaz = FooBarBaz
     HasBarOnly = IncompleteFooBar
@@ -198,7 +204,9 @@ class IncompleteFooBarDynamic(Dynamic.Provider):
         pass
 
 
-class DynamicProviderTests(BaseProviderTestsMixin, unittest.TestCase):
+class DynamicProviderTests(
+        CompleteProviderTestsMixin, IncompleteProviderTestsMixin,
+        unittest.TestCase):
 
     HasFooBarBaz = FooBarBazDynamic
     HasBarOnly = IncompleteFooBarDynamic
@@ -222,3 +230,119 @@ class DynamicProviderTests(BaseProviderTestsMixin, unittest.TestCase):
         self.assertEqual(obj.foo, 2)
         foobaz.baz()
         self.assertEqual(obj.foo, 3)
+
+
+class RegisteredFooBarBaz:
+
+    """FooBar provider class.
+
+    A class which implements FooBar, and looks like FooBaz, but does
+    not implement FooBaz.
+    """
+
+    foo = 1
+
+    def bar(self):
+        self.foo = 2
+
+    def baz(self):
+        self.foo = 3
+
+FooBar.register_implementation(RegisteredFooBarBaz)
+
+
+class RegisteredIncompleteFooBar:
+    # doesn't implement foo
+
+    foo = 1
+
+    def bar():
+        pass
+
+# Needs to be complete for registration, but then remove part of class.
+# Document non-deletion of interface attributes as a requirement for
+# registration.
+FooBar.register_implementation(RegisteredIncompleteFooBar)
+del RegisteredIncompleteFooBar.foo
+
+
+class RegisteredImplementationTests(
+        CompleteProviderTestsMixin, unittest.TestCase):
+
+    HasFooBarBaz = RegisteredFooBarBaz
+
+    def test_builtin_type(self):
+        """Built in types can be registered."""
+        class Capitalizable(Interface):
+
+            def capitalize(self):
+                """Return first character capitalized and rest lowercased."""
+
+        Capitalizable.register_implementation(str)
+        c = Capitalizable('a stRing')
+        self.assertEqual(c.capitalize(), 'A string')
+
+    def test_incomplete_implementation_cannot_be_registered(self):
+        with self.assertRaises(InterfaceConformanceError):
+            FooBar.register_implementation(IncompleteFooBar)
+
+    def test_incomplete_provider_validate_none(self):
+        """Incomplete implementations are caught (during debugging).
+
+        If a class successfully registers an interface, but doesn't
+        provide the interface (e.g. deletes an attribute), the problem
+        is not detected during creation.  A normal attribute error will
+        be raised when the attributes is accessed.
+
+        Note, this is the same as `validate=False` for non-registered
+        providers, indicating that classes verified before instantiation
+        are not verified when being instantiated.
+        """
+        obj = RegisteredIncompleteFooBar()
+        foobar = FooBar(obj)
+        with self.assertRaises(AttributeError):
+            foobar.foo
+
+    def test_incomplete_provider_validate_true(self):
+        """validate is True -> always raise InterfaceConformanceError."""
+        obj = RegisteredIncompleteFooBar()
+        with self.assertRaises(InterfaceConformanceError):
+            FooBar(obj, validate=True)
+
+    def test_incomplete_provider_validate_false(self):
+        """validate is False -> always raise late AttributeError."""
+        obj = RegisteredIncompleteFooBar()
+        foobar = FooBar(obj, validate=False)
+        with self.assertRaises(AttributeError):
+            foobar.foo
+
+
+class FooBarBazSubclass(FooBar):
+    pass
+
+
+class DoubleInheritedInterfaceTests(unittest.TestCase):
+
+    """Check that all base classes are treated as provided by an interface.
+
+    If we mistakenly just use the first level of base classes, these tests
+    should fail.
+    """
+
+    def test_provider(self):
+        class FBBImpl(FooBarBazSubclass.Provider):
+            foo = 1
+            bar = 2
+
+        fbb = FBBImpl()
+        self.assertTrue(Foo.provided_by(fbb))
+
+    def test_registered(self):
+        class FBBImpl:
+            foo = 1
+            bar = 2
+
+        FooBarBazSubclass.register_implementation(FBBImpl)
+
+        fbb = FBBImpl()
+        self.assertTrue(Foo.provided_by(fbb))

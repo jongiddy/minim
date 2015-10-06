@@ -36,11 +36,11 @@ code to use the original objects by running Python with the ``-O`` flag.
 
 >>> import sys
 >>> from jute import Interface
->>> class Writes(Interface):
+>>> class Writable(Interface):
 ...     def write(self, buf):
 ...         "Write the string buf."
 ...
->>> class StdoutWriter(Writes.Provider):
+>>> class StdoutWriter(Writable.Provider):
 ...     def flush(self):
 ...         sys.stdout.flush()
 ...     def write(self, buf):
@@ -48,7 +48,7 @@ code to use the original objects by running Python with the ``-O`` flag.
 ...
 >>> def output(writer, buf):
 ...     if __debug__:
-...         writer = Writes(writer)
+...         writer = Writable(writer)
 ...     writer.write(buf)
 ...     writer.flush()
 ...
@@ -67,9 +67,12 @@ run faster without the intervening interface replacement.  In this case,
 the code will work with the current implementation, but may fail if a
 different object, that does not support ``flush`` is passed.
 
-Note, there is no way to specify non-subclassed types as implementing an
-interface.  Hence, ``sys.stdout`` cannot be indicated as satisfying the
-``Writes`` interface.
+Note, it is possible to use the `register_implementation` method to
+specify a type as an implementation of interface, even if it cannot be
+subclassed.  Hence, ``sys.stdout`` can be indicated as directly
+satisfying the``Writable`` interface, using
+
+>>> Writable.register_implementation(file)
 """
 
 
@@ -201,6 +204,9 @@ class InterfaceMetaclass(type):
         class_attributes['Provider'] = InterfaceProvider
         class_attributes['provider_attributes'] = provider_attributes
         interface = super().__new__(meta, name, bases, class_attributes)
+        # An object wrapped by (a subclass of) the interface is
+        # guaranteed to provide the matching attributes.
+        interface.verified = (interface,)
         return interface
 
     def __call__(interface, obj, validate=None):
@@ -222,11 +228,26 @@ class InterfaceMetaclass(type):
         non-implemented attribute is returned in the exception.
         """
         not_implemented = None
-        if isinstance(obj, interface):
-            # an object that has already been wrapped by an interface,
-            # and that interface is a sub-class of this interface, so it
-            # must support all operations
-            pass
+        if isinstance(obj, interface.verified):
+            # an instance of a class that has been verified to provide
+            # the interface, so it must support all operations
+            if validate:
+                for name in interface.provider_attributes:
+                    try:
+                        getattr(obj, name)
+                    except AttributeError:
+                        if not_implemented is None:
+                            not_implemented = []
+                        not_implemented.append(repr(name))
+                if not_implemented:
+                    if len(not_implemented) == 1:
+                        attribute = 'attribute'
+                    else:
+                        attribute = 'attributes'
+                    raise InterfaceConformanceError(
+                        'Object {} does not provide {} {}'.format(
+                            obj, attribute, ', '.join(not_implemented)))
+
         elif (
             isinstance(obj, interface.Provider) or
             isinstance(obj, (Dynamic, Dynamic.Provider)) and
@@ -266,10 +287,33 @@ class InterfaceMetaclass(type):
         :return: True if interface is provided by the object, else False.
         """
         return (
-            isinstance(obj, (interface, interface.Provider)) or
+            isinstance(obj, interface.verified) or
+            isinstance(obj, interface.Provider) or
             isinstance(obj, (Dynamic, Dynamic.Provider)) and
                 obj.provides_interface(interface)
             )
+
+    def register_implementation(interface, cls):
+        """Check if a provider implements the interface, and register it."""
+        not_implemented = None
+        for name in interface.provider_attributes:
+            try:
+                getattr(cls, name)
+            except AttributeError:
+                if not_implemented is None:
+                    not_implemented = []
+                not_implemented.append(repr(name))
+        if not_implemented:
+            if len(not_implemented) == 1:
+                attribute = 'attribute'
+            else:
+                attribute = 'attributes'
+            raise InterfaceConformanceError(
+                'Class {} does not provide {} {}'.format(
+                    cls, attribute, ', '.join(not_implemented)))
+        for base in interface.__mro__:
+            if issubclass(base, Interface) and cls not in base.verified:
+                base.verified += (cls,)
 
 
 class Interface(*_InterfaceBaseClasses, metaclass=InterfaceMetaclass):
