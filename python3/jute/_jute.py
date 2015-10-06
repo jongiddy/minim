@@ -114,7 +114,7 @@ class InterfaceConformanceError(Exception):
         else:
             attribute = 'attributes'
         return '{} does not provide {} {}'.format(
-            self.obj, attribute, ', '.join(self.missing))
+            self.obj, attribute, ', '.join(repr(m) for m in self.missing))
 
 
 # Declare the base classes for the `Interface` class here so the
@@ -133,7 +133,7 @@ def missing_attributes(obj, attributes):
         except AttributeError:
             if missing is None:
                 missing = []
-            missing.append(repr(name))
+            missing.append(name)
     return missing
 
 
