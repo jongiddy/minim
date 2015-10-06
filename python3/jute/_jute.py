@@ -227,18 +227,11 @@ class InterfaceMetaclass(type):
         :raise: an informative error if not. For example, a
         non-implemented attribute is returned in the exception.
         """
-        not_implemented = None
         if isinstance(obj, interface.verified):
             # an instance of a class that has been verified to provide
             # the interface, so it must support all operations
             if validate:
-                for name in interface.provider_attributes:
-                    try:
-                        getattr(obj, name)
-                    except AttributeError:
-                        if not_implemented is None:
-                            not_implemented = []
-                        not_implemented.append(repr(name))
+                not_implemented = interface._get_non_provided_attributes(obj)
                 if not_implemented:
                     if len(not_implemented) == 1:
                         attribute = 'attribute'
@@ -261,13 +254,7 @@ class InterfaceMetaclass(type):
             # not set and code is optimised, accept claims without
             # validating.
             if validate is None and __debug__ or validate:
-                for name in interface.provider_attributes:
-                    try:
-                        getattr(obj, name)
-                    except AttributeError:
-                        if not_implemented is None:
-                            not_implemented = []
-                        not_implemented.append(repr(name))
+                not_implemented = interface._get_non_provided_attributes(obj)
                 if not_implemented:
                     if len(not_implemented) == 1:
                         attribute = 'attribute'
@@ -295,14 +282,7 @@ class InterfaceMetaclass(type):
 
     def register_implementation(interface, cls):
         """Check if a provider implements the interface, and register it."""
-        not_implemented = None
-        for name in interface.provider_attributes:
-            try:
-                getattr(cls, name)
-            except AttributeError:
-                if not_implemented is None:
-                    not_implemented = []
-                not_implemented.append(repr(name))
+        not_implemented = interface._get_non_provided_attributes(cls)
         if not_implemented:
             if len(not_implemented) == 1:
                 attribute = 'attribute'
@@ -314,6 +294,17 @@ class InterfaceMetaclass(type):
         for base in interface.__mro__:
             if issubclass(base, Interface) and cls not in base.verified:
                 base.verified += (cls,)
+
+    def _get_non_provided_attributes(interface, obj):
+        not_implemented = None
+        for name in interface.provider_attributes:
+            try:
+                getattr(obj, name)
+            except AttributeError:
+                if not_implemented is None:
+                    not_implemented = []
+                not_implemented.append(repr(name))
+        return not_implemented
 
 
 class Interface(*_InterfaceBaseClasses, metaclass=InterfaceMetaclass):
