@@ -352,3 +352,47 @@ class DoubleInheritedInterfaceTests(unittest.TestCase):
 
         fbb = FBBImpl()
         self.assertTrue(Foo.provided_by(fbb))
+
+
+class ImplementedByTests(unittest.TestCase):
+
+    def test_implemented_by_self(self):
+        """An interface is implemented by itself."""
+        self.assertTrue(Foo.implemented_by(Foo))
+
+    def test_implemented_by_subinterface(self):
+        """An interface is implemented by a sub-interface."""
+        self.assertTrue(Foo.implemented_by(FooBar))
+
+    def test_implemented_by_registered_class(self):
+        """An interface is implemented by a registered class."""
+        self.assertTrue(Foo.implemented_by(RegisteredFooBarBaz))
+
+    def test_not_implemented_by_verified_provider_class(self):
+        """An interface is implemented by a provider class if verified."""
+        class ProviderClass(Foo.Provider):
+            foo = 1
+        self.assertFalse(Foo.implemented_by(ProviderClass))
+
+    def test_not_implemented_by_non_verified_provider_class(self):
+        """An interface is not implemented by non-verified provider class."""
+        class ProviderClass(Foo.Provider):
+            # Instance is a valid provider, but the class itself is not.
+
+            def __init__(self):
+                self.foo = 1
+        self.assertFalse(Foo.implemented_by(ProviderClass))
+
+    def test_not_implemented_by_provider_instance(self):
+        """An interface is not implemented by a provider instance."""
+        self.assertFalse(Foo.implemented_by(FooBarBaz()))
+
+    def test_not_implemented_by_registered_instance(self):
+        """An interface is not implemented by a registered class instance."""
+        self.assertFalse(Foo.implemented_by(RegisteredFooBarBaz()))
+
+    def test_not_implemented_by_non_provider(self):
+        """An interface is not implemented by a non-providing class."""
+        class C:
+            foo = 1
+        self.assertFalse(Foo.implemented_by(C))

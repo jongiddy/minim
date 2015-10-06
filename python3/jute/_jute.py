@@ -302,6 +302,12 @@ class InterfaceMetaclass(type):
             if issubclass(base, Interface) and cls not in base.verified:
                 base.verified += (cls,)
 
+    def implemented_by(interface, cls):
+        try:
+            return issubclass(cls, interface.verified)
+        except TypeError:
+            return False
+
 
 class Interface(*_InterfaceBaseClasses, metaclass=InterfaceMetaclass):
 
