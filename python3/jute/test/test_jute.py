@@ -180,9 +180,7 @@ class InterfaceProviderTests(
 class FooBarBazDynamic(Dynamic.Provider):
 
     def provides_interface(self, interface):
-        if issubclass(FooBar, interface):
-            return True
-        return False
+        return interface.implemented_by(FooBar)
 
     _foo = 1
 
@@ -202,9 +200,7 @@ class IncompleteFooBarDynamic(Dynamic.Provider):
     # doesn't implement foo
 
     def provides_interface(self, interface):
-        if issubclass(FooBar, interface):
-            return True
-        return False
+        return interface.implemented_by(FooBar)
 
     def bar():
         pass
@@ -221,12 +217,10 @@ class DynamicProviderTests(
         class FooBarBazSubclass(self.HasFooBarBaz):
 
             def provides_interface(self, interface):
-                if (
-                    issubclass(FooBar, interface) or
-                    issubclass(FooBaz, interface)
-                ):
-                    return True
-                return False
+                return (
+                    interface.implemented_by(FooBar) or
+                    interface.implemented_by(FooBaz)
+                )
 
         obj = FooBarBazSubclass()
         foobar = FooBar(obj)
@@ -272,6 +266,14 @@ FooBar.register_implementation(RegisteredIncompleteFooBar)
 del RegisteredIncompleteFooBar.foo
 
 
+class Capitalizable(Interface):
+
+    """An interface provided by string type."""
+
+    def capitalize(self):
+        """Return first character capitalized and rest lowercased."""
+
+
 class RegisteredImplementationTests(
         CompleteProviderTestsMixin, unittest.TestCase):
 
@@ -279,11 +281,6 @@ class RegisteredImplementationTests(
 
     def test_builtin_type(self):
         """Built in types can be registered."""
-        class Capitalizable(Interface):
-
-            def capitalize(self):
-                """Return first character capitalized and rest lowercased."""
-
         Capitalizable.register_implementation(str)
         c = Capitalizable('a stRing')
         self.assertEqual(c.capitalize(), 'A string')
@@ -321,6 +318,14 @@ class RegisteredImplementationTests(
         foobar = FooBar(obj, validate=False)
         with self.assertRaises(AttributeError):
             foobar.foo
+
+    def test_non_class_fails(self):
+        """A non-class interface provider cannot be registered.
+
+        This is required to ensure that registered implementations can
+        be tested quickly using `issubclass`"""
+        with self.assertRaises(TypeError):
+            Capitalizable.register_implementation('')
 
 
 class FooBarBazSubclass(FooBar):
@@ -368,20 +373,20 @@ class ImplementedByTests(unittest.TestCase):
         """An interface is implemented by a registered class."""
         self.assertTrue(Foo.implemented_by(RegisteredFooBarBaz))
 
-    def test_not_implemented_by_verified_provider_class(self):
+    def test_implemented_by_verifiable_provider_class(self):
         """An interface is implemented by a provider class if verified."""
         class ProviderClass(Foo.Provider):
             foo = 1
-        self.assertFalse(Foo.implemented_by(ProviderClass))
+        self.assertTrue(Foo.implemented_by(ProviderClass))
 
-    def test_not_implemented_by_non_verified_provider_class(self):
-        """An interface is not implemented by non-verified provider class."""
+    def test_implemented_by_non_verifiable_provider_class(self):
+        """An interface is implemented by non-verified provider class."""
         class ProviderClass(Foo.Provider):
             # Instance is a valid provider, but the class itself is not.
 
             def __init__(self):
                 self.foo = 1
-        self.assertFalse(Foo.implemented_by(ProviderClass))
+        self.assertTrue(Foo.implemented_by(ProviderClass))
 
     def test_not_implemented_by_provider_instance(self):
         """An interface is not implemented by a provider instance."""

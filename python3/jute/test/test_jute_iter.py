@@ -66,18 +66,22 @@ class IterableProxy(Dynamic.Provider):
         self.wrapped = wrapped_iterable
 
     def provides_interface(self, interface):
-        if issubclass(Iterable, interface):
-            return True
-        return False
+        return interface.implemented_by(Iterable)
 
     def __iter__(self):
         return iter(self.wrapped)
 
 
-class IterDynamicInterfaceTests(IterTestMixin, unittest.TestCase):
+class IterDynamicInstanceTests(IterTestMixin, unittest.TestCase):
 
     def get_test_object(self):
         return IterableProxy(CountTo5())
+
+
+class IterDynamicInterfaceTests(IterTestMixin, unittest.TestCase):
+
+    def get_test_object(self):
+        return Iterable(IterableProxy(CountTo5()))
 
 
 class GeneratedIter(Iterable.Provider):

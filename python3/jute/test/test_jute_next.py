@@ -60,9 +60,7 @@ class IteratorProxy(Dynamic.Provider):
         self.wrapped = wrapped_iterator
 
     def provides_interface(self, interface):
-        if issubclass(Iterator, interface):
-            return True
-        return False
+        return interface.implemented_by(Iterator)
 
     def __iter__(self):
         return self
@@ -71,10 +69,16 @@ class IteratorProxy(Dynamic.Provider):
         return next(self.wrapped)
 
 
-class NextDynamicInterfaceTests(IterTestMixin, unittest.TestCase):
+class NextDynamicInstanceTests(IterTestMixin, unittest.TestCase):
 
     def get_test_object(self):
         return IteratorProxy(LotsOfZeros())
+
+
+class NextDynamicInterfaceTests(IterTestMixin, unittest.TestCase):
+
+    def get_test_object(self):
+        return Iterator(IteratorProxy(LotsOfZeros()))
 
 
 class GeneratedNext(Iterator.Provider):

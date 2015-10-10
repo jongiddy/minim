@@ -48,18 +48,22 @@ class NextInterfaceTests(StringTestMixin, unittest.TestCase):
 class FooStringProxy(Dynamic.Provider):
 
     def provides_interface(self, interface):
-        if issubclass(StringLike, interface):
-            return True
-        return False
+        return interface.implemented_by(StringLike)
 
     def __str__(self):
         return 'foo'
 
 
-class StrDynamicInterfaceTests(StringTestMixin, unittest.TestCase):
+class StrDynamicInstanceTests(StringTestMixin, unittest.TestCase):
 
     def get_test_object(self):
         return FooStringProxy()
+
+
+class StrDynamicInterfaceTests(StringTestMixin, unittest.TestCase):
+
+    def get_test_object(self):
+        return StringLike(FooStringProxy())
 
 
 class GeneratedStr(StringLike.Provider):

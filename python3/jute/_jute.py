@@ -295,6 +295,7 @@ class InterfaceMetaclass(type):
 
     def register_implementation(interface, cls):
         """Check if a provider implements the interface, and register it."""
+        issubclass(cls, cls)      # ensure cls can appear on both sides
         missing = missing_attributes(cls, interface.provider_attributes)
         if missing:
             raise InterfaceConformanceError(cls, missing)
@@ -303,8 +304,17 @@ class InterfaceMetaclass(type):
                 base.verified += (cls,)
 
     def implemented_by(interface, cls):
+        """Check if class claims to provide the interface.
+
+        :return: True if interface is implemented by the class, else False.
+        """
+        # Contrast this function with `provided_by`. Note that Dynamic Provider
+        # classes cannot dynamically claim to implement an interface.
         try:
-            return issubclass(cls, interface.verified)
+            return (
+                issubclass(cls, interface.verified) or
+                issubclass(cls, interface.Provider)
+            )
         except TypeError:
             return False
 
