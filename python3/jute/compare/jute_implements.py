@@ -28,6 +28,7 @@ class IncrementsBar(Increments):
     bar = 1
 
 
+@jute.implements(IncrementsBar)
 class IncrementingInteger:
 
     """Increment an integer when increment is called."""
@@ -36,8 +37,6 @@ class IncrementingInteger:
 
     def increment(self):
         self.bar += 1
-
-IncrementsBar.register_implementation(IncrementingInteger)
 
 
 def f(incrementer):

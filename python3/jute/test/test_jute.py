@@ -1,6 +1,6 @@
 import unittest
 
-from jute import Interface, Dynamic, InterfaceConformanceError
+from jute import Interface, Dynamic, implements, InterfaceConformanceError
 
 
 # Simple interface hierarchy for testing
@@ -326,6 +326,32 @@ class RegisteredImplementationTests(
         be tested quickly using `issubclass`"""
         with self.assertRaises(TypeError):
             Capitalizable.register_implementation('')
+
+
+@implements(FooBar)
+class DecoratedFooBarBaz:
+
+    """FooBar provider class.
+
+    A class which implements FooBar, and looks like FooBaz, but does
+    not implement FooBaz.
+    """
+
+    foo = 1
+
+    def bar(self):
+        self.foo = 2
+
+    def baz(self):
+        self.foo = 3
+
+FooBar.register_implementation(RegisteredFooBarBaz)
+
+
+class DecoratedImplementationTests(
+        CompleteProviderTestsMixin, unittest.TestCase):
+
+    HasFooBarBaz = RegisteredFooBarBaz
 
 
 class FooBarBazSubclass(FooBar):

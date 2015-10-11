@@ -352,3 +352,19 @@ class Dynamic(Interface):
         This method returns True when the interface class is provided,
         or False when the interface is not provided.
         """
+
+
+def implements(*interfaces):
+    """Decorator to mark a class as implementing an interface.
+
+    The decorator does not wrap the class. It simply runs
+    `register_implementation` for each interface, and returns the
+    original class.  This handily avoids many of the problems typical of
+    wrapping decorators. See
+    http://blog.dscpl.com.au/2014/01/how-you-implemented-your-python.html
+    """
+    def decorator(cls):
+        for interface in interfaces:
+            interface.register_implementation(cls)
+        return cls
+    return decorator
