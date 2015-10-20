@@ -232,7 +232,7 @@ class DynamicProviderTests(
         self.assertEqual(obj.foo, 3)
 
 
-class RegisteredFooBarBaz:
+class RegisteredProviderFooBarBaz:
 
     """FooBar provider class.
 
@@ -248,22 +248,16 @@ class RegisteredFooBarBaz:
     def baz(self):
         self.foo = 3
 
-FooBar.register_implementation(RegisteredFooBarBaz)
+FooBar.register_provider(RegisteredProviderFooBarBaz)
 
 
-class RegisteredIncompleteFooBar:
+class RegisteredProviderIncompleteFooBar:
     # doesn't implement foo
-
-    foo = 1
 
     def bar():
         pass
 
-# Needs to be complete for registration, but then remove part of class.
-# Document non-deletion of interface attributes as a requirement for
-# registration.
-FooBar.register_implementation(RegisteredIncompleteFooBar)
-del RegisteredIncompleteFooBar.foo
+FooBar.register_provider(RegisteredProviderIncompleteFooBar)
 
 
 class Capitalizable(Interface):
@@ -274,10 +268,92 @@ class Capitalizable(Interface):
         """Return first character capitalized and rest lowercased."""
 
 
+class RegisteredProviderTests(
+        CompleteProviderTestsMixin, unittest.TestCase):
+
+    HasFooBarBaz = RegisteredProviderFooBarBaz
+
+    def test_builtin_type(self):
+        """Built in types can be registered."""
+        Capitalizable.register_provider(str)
+        c = Capitalizable('a stRing')
+        self.assertEqual(c.capitalize(), 'A string')
+
+    def test_incomplete_implementation_cannot_be_registered(self):
+        with self.assertRaises(InterfaceConformanceError):
+            FooBar.register_implementation(IncompleteFooBar)
+
+    def test_incomplete_provider_validate_none(self):
+        """Incomplete providers are caught (during debugging)."""
+        obj = RegisteredProviderIncompleteFooBar()
+        if __debug__:
+            with self.assertRaises(InterfaceConformanceError):
+                foobar = FooBar(obj)
+        else:
+            foobar = FooBar(obj)
+            with self.assertRaises(AttributeError):
+                foobar.foo
+
+    def test_incomplete_provider_validate_true(self):
+        """validate is True -> always raise InterfaceConformanceError."""
+        obj = RegisteredProviderIncompleteFooBar()
+        with self.assertRaises(InterfaceConformanceError):
+            FooBar(obj, validate=True)
+
+    def test_incomplete_provider_validate_false(self):
+        """validate is False -> always raise late AttributeError."""
+        obj = RegisteredProviderIncompleteFooBar()
+        foobar = FooBar(obj, validate=False)
+        with self.assertRaises(AttributeError):
+            foobar.foo
+
+    def test_non_class_fails(self):
+        """A non-class interface provider cannot be registered.
+
+        This is required to ensure that registered implementations can
+        be tested quickly using `issubclass`"""
+        with self.assertRaises(TypeError):
+            Capitalizable.register_provider('')
+
+
+class RegisteredImplementationFooBarBaz:
+
+    """FooBar provider class.
+
+    A class which implements FooBar, and looks like FooBaz, but does
+    not implement FooBaz.
+    """
+
+    foo = 1
+
+    def bar(self):
+        self.foo = 2
+
+    def baz(self):
+        self.foo = 3
+
+FooBar.register_implementation(RegisteredImplementationFooBarBaz)
+
+
+class RegisteredImplementationIncompleteFooBar:
+    # doesn't implement foo
+
+    foo = 1
+
+    def bar():
+        pass
+
+# Needs to be complete for registration, but then remove part of class.
+# Document non-deletion of interface attributes as a requirement for
+# registration.
+FooBar.register_implementation(RegisteredImplementationIncompleteFooBar)
+del RegisteredImplementationIncompleteFooBar.foo
+
+
 class RegisteredImplementationTests(
         CompleteProviderTestsMixin, unittest.TestCase):
 
-    HasFooBarBaz = RegisteredFooBarBaz
+    HasFooBarBaz = RegisteredImplementationFooBarBaz
 
     def test_builtin_type(self):
         """Built in types can be registered."""
@@ -301,20 +377,20 @@ class RegisteredImplementationTests(
         providers, indicating that classes verified before instantiation
         are not verified when being instantiated.
         """
-        obj = RegisteredIncompleteFooBar()
+        obj = RegisteredImplementationIncompleteFooBar()
         foobar = FooBar(obj)
         with self.assertRaises(AttributeError):
             foobar.foo
 
     def test_incomplete_provider_validate_true(self):
         """validate is True -> always raise InterfaceConformanceError."""
-        obj = RegisteredIncompleteFooBar()
+        obj = RegisteredImplementationIncompleteFooBar()
         with self.assertRaises(InterfaceConformanceError):
             FooBar(obj, validate=True)
 
     def test_incomplete_provider_validate_false(self):
         """validate is False -> always raise late AttributeError."""
-        obj = RegisteredIncompleteFooBar()
+        obj = RegisteredImplementationIncompleteFooBar()
         foobar = FooBar(obj, validate=False)
         with self.assertRaises(AttributeError):
             foobar.foo
@@ -345,13 +421,13 @@ class DecoratedFooBarBaz:
     def baz(self):
         self.foo = 3
 
-FooBar.register_implementation(RegisteredFooBarBaz)
+FooBar.register_implementation(RegisteredImplementationFooBarBaz)
 
 
 class DecoratedImplementationTests(
         CompleteProviderTestsMixin, unittest.TestCase):
 
-    HasFooBarBaz = RegisteredFooBarBaz
+    HasFooBarBaz = RegisteredImplementationFooBarBaz
 
 
 class FooBarBazSubclass(FooBar):
@@ -397,7 +473,7 @@ class ImplementedByTests(unittest.TestCase):
 
     def test_implemented_by_registered_class(self):
         """An interface is implemented by a registered class."""
-        self.assertTrue(Foo.implemented_by(RegisteredFooBarBaz))
+        self.assertTrue(Foo.implemented_by(RegisteredImplementationFooBarBaz))
 
     def test_implemented_by_verifiable_provider_class(self):
         """An interface is implemented by a provider class if verified."""
@@ -420,7 +496,7 @@ class ImplementedByTests(unittest.TestCase):
 
     def test_not_implemented_by_registered_instance(self):
         """An interface is not implemented by a registered class instance."""
-        self.assertFalse(Foo.implemented_by(RegisteredFooBarBaz()))
+        self.assertFalse(Foo.implemented_by(RegisteredImplementationFooBarBaz()))
 
     def test_not_implemented_by_non_provider(self):
         """An interface is not implemented by a non-providing class."""

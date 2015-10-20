@@ -231,6 +231,7 @@ class InterfaceMetaclass(type):
         # An object wrapped by (a subclass of) the interface is
         # guaranteed to provide the matching attributes.
         interface.verified = (interface,)
+        interface.unverified = (interface.Provider,)
         return interface
 
     def __call__(interface, obj, validate=None):
@@ -260,7 +261,7 @@ class InterfaceMetaclass(type):
                 if missing:
                     raise InterfaceConformanceError(obj, missing)
         elif (
-            isinstance(obj, interface.Provider) or
+            isinstance(obj, interface.unverified) or
             isinstance(obj, (Dynamic, Dynamic.Provider)) and
                 obj.provides_interface(interface)
         ):
@@ -281,6 +282,17 @@ class InterfaceMetaclass(type):
                 'Object {} does not provide interface {}'. format(
                     obj, interface.__name__))
 
+    def register_provider(interface, cls):
+        """Register a provider class to the interface."""
+        issubclass(cls, cls)      # ensure cls can appear on both sides
+        for base in interface.__mro__:
+            if (
+                issubclass(base, Interface) and
+                cls not in base.verified and
+                cls not in base.unverified
+            ):
+                base.unverified += (cls,)
+
     def provided_by(interface, obj):
         """Check if object claims to provide the interface.
 
@@ -288,7 +300,7 @@ class InterfaceMetaclass(type):
         """
         return (
             isinstance(obj, interface.verified) or
-            isinstance(obj, interface.Provider) or
+            isinstance(obj, interface.unverified) or
             isinstance(obj, (Dynamic, Dynamic.Provider)) and
                 obj.provides_interface(interface)
             )
@@ -313,7 +325,7 @@ class InterfaceMetaclass(type):
         try:
             return (
                 issubclass(cls, interface.verified) or
-                issubclass(cls, interface.Provider)
+                issubclass(cls, interface.unverified)
             )
         except TypeError:
             return False
